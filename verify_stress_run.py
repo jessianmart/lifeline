@@ -1,8 +1,22 @@
 import asyncio
 import os
 import sys
-
 from devos.swarm import DevOSSwarmOrchestrator
+
+def generate_broken_workspace():
+    # Creates isolated workspace for Single Branch (A)
+    with open("broken_module_A.py", "w") as f:
+        f.write("def execute_core_computation(): raise AssertionError('Initial Seed Break')\n")
+    with open("test_broken_A.py", "w") as f:
+        f.write("""import unittest
+import broken_module_A
+class TestBroken(unittest.TestCase):
+    def test_main(self): self.assertEqual(broken_module_A.execute_core_computation(), 42)
+""")
+
+def cleanup_workspace():
+    for f in ["broken_module_A.py", "test_broken_A.py"]:
+        if os.path.exists(f): os.remove(f)
 
 async def main():
     print("==================================================")
@@ -13,37 +27,34 @@ async def main():
     if os.path.exists(db_file):
         os.remove(db_file)
 
+    generate_broken_workspace()
+
     # The Patch content that fixes the broken module!
     fix_patch = """def execute_core_computation():
-    \"\"\"Fixed! Math core recovered.\"\"\"
     return 42
 """
 
-    # Target files
-    broken_file = "broken_module.py"
-    
-    # We use portable builtin unittest runner for sandbox isolation validation!
-    test_cmd = [sys.executable, "-m", "unittest", "test_broken.py"]
-
-    # Bootstrap system application
     swarm = DevOSSwarmOrchestrator(db_file)
     await swarm.bootstrap()
 
-    # Launch autonomous coding workload!
-    passed = await swarm.run_stress_loop(
-        workflow_id="wf_stress_01",
-        broken_file=broken_file,
-        patch_content=fix_patch,
-        test_cmd=test_cmd
-    )
+    try:
+        # Launch autonomous coding workload with single branch
+        passed = await swarm.run_chaos_storm(
+            workflow_id="wf_stress_01",
+            fix_perm_content=fix_patch,
+            branch_count=1
+        )
 
-    print("\n==================================================")
-    if passed:
-        print("      STRESS TEST RESULT: PASS [SUCCESS]")
-        print("   The DevOS Swarm has self-repaired successfully!")
-    else:
-        print("      STRESS TEST RESULT: FAIL [ERROR]")
-    print("==================================================")
+        print("\n==================================================")
+        if passed:
+            print("      STRESS TEST RESULT: PASS [SUCCESS]")
+            print("   The DevOS Swarm has self-repaired successfully!")
+        else:
+            print("      STRESS TEST RESULT: FAIL [ERROR]")
+        print("==================================================")
+
+    finally:
+        cleanup_workspace()
 
 if __name__ == "__main__":
     asyncio.run(main())
