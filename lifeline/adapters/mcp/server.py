@@ -13,10 +13,13 @@ def inspect_causal_ledger(db_path: str) -> str:
     Allows LLM agents to inspect past transactions and replay logical clocks.
     """
     try:
-        conn = sqlite3.connect(db_path)
+        # [AX CONTENTION LOCK MITIGATION]: Connect strictly in Read-Only URI mode
+        import os
+        abs_path = os.path.abspath(db_path).replace("\\", "/")
+        conn = sqlite3.connect(f"file:{abs_path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM causal_ledger ORDER BY logical_clock DESC LIMIT 100")
+        cursor.execute("SELECT * FROM events ORDER BY logical_clock DESC LIMIT 100")
         rows = cursor.fetchall()
         conn.close()
         
@@ -48,10 +51,13 @@ def inspect_dlq(db_path: str) -> str:
     Allows LLM agents to evaluate execution traces and formulate contextual remedies.
     """
     try:
-        conn = sqlite3.connect(db_path)
+        # [AX CONTENTION LOCK MITIGATION]: Connect strictly in Read-Only URI mode
+        import os
+        abs_path = os.path.abspath(db_path).replace("\\", "/")
+        conn = sqlite3.connect(f"file:{abs_path}?mode=ro", uri=True)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM dead_letters ORDER BY failed_at DESC LIMIT 50")
+        cursor.execute("SELECT * FROM dead_letter_events ORDER BY failed_at DESC LIMIT 50")
         rows = cursor.fetchall()
         conn.close()
         
