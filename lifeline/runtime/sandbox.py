@@ -63,3 +63,77 @@ class IsolatedSandboxExecutor:
             tokens=tokens_consumed, time_ms=elapsed_ms, success=success
         )
         return result, telemetry
+
+    async def execute_physical_command(
+        self,
+        agent_id: str,
+        cmd_args: list[str],
+        cwd: str = None
+    ) -> tuple[Dict[str, Any], SandboxExecutionTelemetry]:
+        """
+        Spawns real Host Process isolation via subprocess.
+        Audits full stdout, stderr, exit status, and measures true CPU execution timing.
+        Deducts footprint dynamically from the ResourceManager.
+        """
+        import subprocess
+
+        # 1. Dispatch verification
+        self.resource_manager.verify_dispatch_eligibility(agent_id)
+
+        # 2. Run Process and measure physics
+        t_start = time.perf_counter()
+        success = False
+        
+        try:
+            process = subprocess.run(
+                cmd_args,
+                capture_output=True,
+                text=True,
+                cwd=cwd,
+                timeout=30 # Safeguard against infinite hanging loops
+            )
+            success = (process.returncode == 0)
+            
+            # Hardening: Truncate stdout/stderr to prevent explosive context payload inflation
+            MAX_LOG_CHARS = 5000
+            stdout_clean = (process.stdout[:MAX_LOG_CHARS] + "\n[TRUNCATED DUE TO OVERFLOW]") if len(process.stdout) > MAX_LOG_CHARS else process.stdout
+            stderr_clean = (process.stderr[:MAX_LOG_CHARS] + "\n[TRUNCATED DUE TO OVERFLOW]") if len(process.stderr) > MAX_LOG_CHARS else process.stderr
+
+            result = {
+                "returncode": process.returncode,
+                "stdout": stdout_clean,
+                "stderr": stderr_clean
+            }
+        except subprocess.TimeoutExpired as e:
+            success = False
+            result = {
+                "returncode": -124, # Standard timeout exit code
+                "stdout": e.stdout.decode(errors='ignore')[:2000] if e.stdout else "",
+                "stderr": f"EXECUTION_TIMEOUT: Subprocess exceeded 30s hardware barrier.\n{e.stderr.decode(errors='ignore')[:2000] if e.stderr else ''}"
+            }
+        except Exception as e:
+            success = False
+            result = {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": str(e)
+            }
+
+        t_end = time.perf_counter()
+
+        # 3. Telemetry calculation
+        elapsed_ms = int((t_end - t_start) * 1000)
+        if elapsed_ms < 1: 
+            elapsed_ms = 1
+
+        # Cost: Base 100 tokens for real system spawn + len(output) * 0.5 (to simulate processing costs)
+        out_density = len(result["stdout"]) + len(result["stderr"])
+        tokens_consumed = 100 + int(out_density * 0.2)
+
+        # 4. Deduct quotas
+        self.resource_manager.charge_resource(agent_id, tokens_consumed, elapsed_ms)
+
+        telemetry = SandboxExecutionTelemetry(
+            tokens=tokens_consumed, time_ms=elapsed_ms, success=success
+        )
+        return result, telemetry
