@@ -151,6 +151,17 @@ class BranchMergeEvent(EventBase):
     merged_state_summary: Optional[Dict[str, Any]] = None
 
 
+class SnapshotAvailableEvent(EventBase):
+    """
+    [AX CLAIM CHECK PATTERN]: Distributed Event propagating availability of 
+    a deep state checkpoint. Does NOT carry the physical blob.
+    Directs other nodes to retrieve out-of-band from external storage (S3/NFS).
+    """
+    event_type: Literal["snapshot_available"] = "snapshot_available"
+    anchor_hash: str
+    storage_uri: str
+
+
 def parse_event_from_json(payload_json: str) -> EventBase:
     """Centralized industrial deserialization factory for all ledger events."""
     payload = json.loads(payload_json)
@@ -179,6 +190,8 @@ def parse_event_from_json(payload_json: str) -> EventBase:
         return FailureEvent(**payload)
     elif event_type == "branch_merge":
         return BranchMergeEvent(**payload)
+    elif event_type == "snapshot_available":
+        return SnapshotAvailableEvent(**payload)
     else:
         return EventBase(**payload)
 
