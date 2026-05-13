@@ -25,3 +25,7 @@ class EventNotFoundError(StorageError):
 class ExecutionPolicyError(LifelineError):
     """Raised when execution policy, sandbox bounds, or hardware access is breached."""
     pass
+
+class CognitiveParsingError(LifelineError):
+    """Raised when LLM generation fails structural JSON validation or schema enforcement."""
+    pass
