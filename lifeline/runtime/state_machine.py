@@ -62,8 +62,11 @@ class WorkflowStateMachine:
             allowed = self.VALID_TRANSITIONS.get(current, [])
             if to_state not in allowed:
                 raise StateReconstructionError(
-                    f"Illegal State Machine Transition: Cannot move from {current} to {to_state}. "
-                    f"(Trigger: {trigger})"
+                    f"AX-CRITICAL EXCEPTION: Transition from '{current}' to '{to_state}' is ILLEGAL. "
+                    f"VALID_TARGETS: {allowed}. "
+                    f"TRIGGER_ATTEMPTED: '{trigger}'. "
+                    f"AI INSTRUCTION: The triggered transition violates the finite state machine guards. "
+                    f"Re-evaluate the workflow DAG topology and emit an event targeting a valid state defined in VALID_TARGETS."
                 )
 
         # Instantiate transaction event

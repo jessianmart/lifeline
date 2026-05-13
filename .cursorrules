@@ -1,0 +1,49 @@
+# INVARIANTES E REGRAS MATEMÁTICAS (MODO AX)
+
+## 1. INVARIANTE DE INTEGRIDADE CAUSAL (DAG)
+REGRA: O logical_clock de um evento filho deve ser estritamente superior ao maior logical_clock de todos os seus parent_event_ids.
+Fórmula: clock_filho = max(clock_parents) + 1
+IMPLICAÇÃO: Violar isto corrompe o DAG e causa falha crítica no EventEngine. Eventos são imutáveis e append-only.
+
+## 2. MAPEAMENTO DA MÁQUINA DE ESTADOS (WorkflowStateMachine)
+Dicionário exato de transições válidas (Qualquer desvio levanta StateReconstructionError):
+```python
+VALID_TRANSITIONS = {
+    "PENDING": ["READY", "CANCELLED"],
+    "READY": ["RUNNING", "CANCELLED"],
+    "RUNNING": ["WAITING", "RETRYING", "COMPLETED", "FAILED", "TIMEOUT", "CANCELLED"],
+    "WAITING": ["RUNNING", "TIMEOUT", "CANCELLED"],
+    "RETRYING": ["RUNNING", "CANCELLED"],
+    "COMPLETED": ["ROLLEDBACK"],
+    "FAILED": ["RETRYING", "ROLLEDBACK"],
+    "CANCELLED": ["ROLLEDBACK"],
+    "TIMEOUT": ["RETRYING", "ROLLEDBACK"],
+    "ROLLEDBACK": ["READY"]
+}
+```
+
+## 3. TOPOLOGIA DE ESTADOS
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> READY
+    READY --> RUNNING
+    RUNNING --> WAITING
+    RUNNING --> RETRYING
+    RUNNING --> COMPLETED
+    RUNNING --> FAILED
+    RUNNING --> TIMEOUT
+    WAITING --> RUNNING
+    RETRYING --> RUNNING
+    COMPLETED --> ROLLEDBACK
+    FAILED --> ROLLEDBACK
+    ROLLEDBACK --> READY
+```
+
+## 4. TAXONOMIA DE EXCEÇÕES COMO CONTROLO DE FLUXO
+- `CognitiveParsingError`: ERRO DE LLM. CAPTURAR E EMITIR `FailureEvent(failure_domain="COGNITIVE", recovered=False)`. NÃO interromper a execução física. O compressor agrupará retries sequenciais automaticamente.
+- `ResourceExhaustionError`: THROTTLING. Mover estado para `SUSPENDED_RATE_LIMIT` e suspender execução até o epoch permitido.
+
+## 5. RIGIDEZ DE TIPAGEM (Pydantic Strict=True)
+- Ativo em `EventBase`, `ScheduledTask`, `ProcessControlBlock`, `ContextBudget`, `ResourceQuota`.
+- COERÇÃO PROIBIDA: Converter explicitamente datetimes ISO e strings numéricas antes de instanciar classes. 

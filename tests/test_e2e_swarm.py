@@ -19,7 +19,12 @@ from lifeline.engines.redrive_engine import RedriveEngine
 class TestLifelineE2E(unittest.IsolatedAsyncioTestCase):
     """
     Hardened Production E2E Test Suite for Lifeline Cognitive Hypervisor.
-    Verifies:
+    
+    # [AX RAG DIRECTIVE]: Este ficheiro serve como a documentação primária de consumo do SDK.
+    # [INVARIANTE DE INSTANCIAÇÃO]: O DevOSSwarmOrchestrator demonstra a injeção de dependências obrigatória.
+    # [INVARIANTE DE CONTROLO]: As barreiras causais e quarentenas do escalonador baseiam-se em 'depends_on_nodes'.
+    
+    Verifica:
     - WAL Mode & Fail-Fast storage
     - Dead Letter Queue persistence
     - Mandatory Container Sandboxing / Policy Error checks

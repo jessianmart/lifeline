@@ -1,0 +1,81 @@
+# LIFELINE COGNITIVE OS SCHEMAS & CONTRACTS (AX INDEX)
+
+## 1. CONTRATO DE ESQUEMA: EventBase (model_json_schema())
+```json
+{
+  "properties": {
+    "event_id": {
+      "default": "",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "parent_event_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Parent Event Ids",
+      "type": "array"
+    },
+    "logical_clock": {
+      "default": 0,
+      "title": "Logical Clock",
+      "type": "integer"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "agent_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "title": "Agent Id"
+    },
+    "workflow_id": {
+      "anyOf": [{"type": "string"}, {"type": "null"}],
+      "title": "Workflow Id"
+    }
+  },
+  "title": "EventBase",
+  "type": "object"
+}
+```
+
+## 2. ESTRUTURA DE CONTEXTO: ContextPayload
+Envelope fornecido no despacho final dos agentes:
+```json
+{
+  "properties": {
+    "workflow_id": { "type": "string" },
+    "workflow_state": {
+      "enum": ["PENDING", "READY", "RUNNING", "WAITING", "RETRYING", "COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "ROLLEDBACK"],
+      "type": "string"
+    },
+    "reconstructed_state": { "type": "object", "description": "Dicionário arbitrário consolidado pela StateEngine" },
+    "compressed_causal_chain": { "items": { "$ref": "#/EventBase" }, "type": "array" },
+    "active_failures": { "items": { "type": "object" }, "type": "array" }
+  },
+  "required": ["workflow_id", "workflow_state", "reconstructed_state", "compressed_causal_chain", "active_failures"],
+  "title": "ContextPayload",
+  "type": "object"
+}
+```
+
+## 3. INJEÇÃO EXPLÍCITA DE DEPENDÊNCIAS
+Zere singletons ou globais. Todas as classes exigem dependências declaradas no construtor:
+```python
+class Example:
+    def __init__(self, event_engine: EventEngine, state_engine: StateEngine, store: SQLiteEventStore):
+```
+
+## 4. MAPA DE EXPLORAÇÃO MCP (Model Context Protocol)
+Utilize as rotas via stdio local para auditoria em tempo real:
+- Recurso Ledger: `lifeline://{db_path}/ledger`
+- Recurso DLQ: `lifeline://{db_path}/dead_letters`
+- Ferramenta Estado: `get_workflow_status_tool(db_path, workflow_id)`
+- Ferramenta Transição: `transition_workflow_state_tool(db_path, workflow_id, to_state, trigger_action)`
+
+## 5. TDD INVERTIDO COMO DOCUMENTAÇÃO PRINCIPAL
+RAG DIRECTIVE: Para extrair blueprints de instanciação, leia diretamente os seguintes ficheiros validados pelo runtime físico:
+- `tests/test_e2e_swarm.py`: Fluxos massivos de concorrência, barreiras causais, sandbox limits e DLQ fallback.
+- `tests/test_llm_integration.py`: Mocks de adapters Gemini, parsing locks de JSON e colapso semântico de contexto.
+- `tests/test_mcp_contract.py`: Registro assíncrono de endpoints de contexto de IDE.

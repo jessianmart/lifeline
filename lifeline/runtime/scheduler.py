@@ -8,6 +8,8 @@ from lifeline.runtime.resources import ResourceManager, ResourceExhaustionError
 
 class ScheduledTask(BaseModel):
     """Representation of a Work Unit managed by the Cognitive Scheduler."""
+    model_config = {"strict": True}
+    
     task_id: str
     workflow_id: str
     agent_id: str

@@ -25,6 +25,8 @@ class EventBase(BaseModel):
     Acts as the fundamental primitive of the causal cognitive ledger.
     Graph-native by relying on `parent_event_ids` to permit operational branching, forks, and joins.
     """
+    model_config = {"strict": True}
+    
     event_id: EventID = Field(default="")
     
     # Causal Graph linking (replaces linear previous_event_hash)
@@ -152,6 +154,15 @@ class BranchMergeEvent(EventBase):
 def parse_event_from_json(payload_json: str) -> EventBase:
     """Centralized industrial deserialization factory for all ledger events."""
     payload = json.loads(payload_json)
+    
+    # Explicit AX Type Conversion: In Strict Mode, Pydantic refuses string-to-datetime coercion.
+    if "timestamp" in payload and isinstance(payload["timestamp"], str):
+        t_str = payload["timestamp"]
+        # Python fromisoformat requires replacement of Zulu Z with +00:00
+        if t_str.endswith("Z"):
+            t_str = t_str[:-1] + "+00:00"
+        payload["timestamp"] = datetime.fromisoformat(t_str)
+        
     event_type = payload.get("event_type", "base")
     
     if event_type == "system":

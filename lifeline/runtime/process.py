@@ -12,6 +12,8 @@ ProcessState = Literal[
 
 class ProcessControlBlock(BaseModel):
     """Kernel metadata for a live Agent Process Thread."""
+    model_config = {"strict": True}
+    
     pid: str
     agent_id: str
     workflow_id: str

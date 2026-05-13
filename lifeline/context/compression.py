@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 class ContextBudget(BaseModel):
     """Enforces execution safety limits on context size and analytical depth."""
+    model_config = {"strict": True}
+    
     max_events: int = 15
     max_failures: int = 3
     max_character_budget: int = 8000

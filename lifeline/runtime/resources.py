@@ -7,6 +7,8 @@ class ResourceExhaustionError(Exception):
 
 class ResourceQuota(BaseModel):
     """System-level allocations for CPU (ms) and computational currency (Tokens)."""
+    model_config = {"strict": True}
+    
     max_tokens: int = 10000
     consumed_tokens: int = 0
     
