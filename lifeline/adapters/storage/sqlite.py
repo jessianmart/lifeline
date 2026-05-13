@@ -6,7 +6,8 @@ import aiosqlite
 
 from lifeline.core.events import (
     EventBase, SystemEvent, WorkflowEvent, AgentEvent, 
-    ToolExecutionEvent, WorkflowStateTransitionEvent, FailureEvent, BranchMergeEvent
+    ToolExecutionEvent, WorkflowStateTransitionEvent, FailureEvent, BranchMergeEvent,
+    parse_event_from_json
 )
 from lifeline.core.types import EventID, WorkflowID, AgentID
 from .base import AbstractEventStore, AbstractSnapshotStore
@@ -66,23 +67,7 @@ class SQLiteEventStore(AbstractEventStore):
             await db.commit()
 
     def _parse_event(self, event_type: str, payload_json: str) -> EventBase:
-        payload = json.loads(payload_json)
-        if event_type == "system":
-            return SystemEvent(**payload)
-        elif event_type == "workflow":
-            return WorkflowEvent(**payload)
-        elif event_type == "state_transition":
-            return WorkflowStateTransitionEvent(**payload)
-        elif event_type == "agent":
-            return AgentEvent(**payload)
-        elif event_type == "tool_execution":
-            return ToolExecutionEvent(**payload)
-        elif event_type == "failure":
-            return FailureEvent(**payload)
-        elif event_type == "branch_merge":
-            return BranchMergeEvent(**payload)
-        else:
-            return EventBase(**payload)
+        return parse_event_from_json(payload_json)
 
     async def append(self, event: EventBase) -> None:
         payload_json = event.model_dump_json()
@@ -272,6 +257,19 @@ class SQLiteEventStore(AbstractEventStore):
                 """,
                 (event_id, now, subscriber_name, error_message, stack_trace, event_payload)
             )
+            await db.commit()
+
+    async def get_dead_letters(self) -> List[dict]:
+        async with aiosqlite.connect(self.db_path) as db:
+            # Keep read connection thread-safe and clean
+            db.row_factory = sqlite3.Row
+            async with db.execute("SELECT id, event_id, failed_at, subscriber_name, error_message, stack_trace, event_payload FROM dead_letter_events ORDER BY failed_at ASC") as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+
+    async def delete_dead_letter(self, record_id: int) -> None:
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("DELETE FROM dead_letter_events WHERE id = ?", (record_id,))
             await db.commit()
 
 

@@ -147,3 +147,27 @@ class BranchMergeEvent(EventBase):
     converged_from_branches: List[str] = Field(description="List of leaf EventIDs converging")
     reconciliation_strategy: str
     merged_state_summary: Optional[Dict[str, Any]] = None
+
+
+def parse_event_from_json(payload_json: str) -> EventBase:
+    """Centralized industrial deserialization factory for all ledger events."""
+    payload = json.loads(payload_json)
+    event_type = payload.get("event_type", "base")
+    
+    if event_type == "system":
+        return SystemEvent(**payload)
+    elif event_type == "workflow":
+        return WorkflowEvent(**payload)
+    elif event_type == "state_transition":
+        return WorkflowStateTransitionEvent(**payload)
+    elif event_type == "agent":
+        return AgentEvent(**payload)
+    elif event_type == "tool_execution":
+        return ToolExecutionEvent(**payload)
+    elif event_type == "failure":
+        return FailureEvent(**payload)
+    elif event_type == "branch_merge":
+        return BranchMergeEvent(**payload)
+    else:
+        return EventBase(**payload)
+

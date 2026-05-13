@@ -19,6 +19,9 @@ class ScheduledTask(BaseModel):
     
     # Security policies: Required privileges to authorized dispatch
     required_capabilities: List[str] = Field(default_factory=list)
+    
+    # Throttling & Backoff: Epoch time until which the scheduler ignores this unit to preserve CPU
+    suspended_until: Optional[float] = None
 
 class CognitiveScheduler:
     """
@@ -51,6 +54,9 @@ class CognitiveScheduler:
         Audits the backlog. Releases tasks whose causal and security predicates are fully met.
         Injects authentic reconstructed context into the dispatch envelope.
         """
+        import time
+        current_time = time.time()
+        
         dispatched_envelopes = []
         remaining_backlog = []
 
@@ -59,6 +65,12 @@ class CognitiveScheduler:
         completed_nodes = set()
         
         for task in self._backlog:
+            # 0. AUDIT RATE-LIMIT & BACKOFF WAKE BARRIERS
+            if task.suspended_until and current_time < task.suspended_until:
+                # Sumarily bypassed: conserves CPU & Ledger I/O without executing blocker queries
+                remaining_backlog.append(task)
+                continue
+
             # 1. AUDIT CAUSAL BLOCKERS
             # Query the stream to see which workflow_node_ids have finished
             # We'll check current completed nodes from ledger

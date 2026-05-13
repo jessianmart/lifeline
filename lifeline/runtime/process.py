@@ -6,8 +6,8 @@ from lifeline.core.events import SystemEvent
 # Expanded systems state list for high-res continuity governance
 ProcessState = Literal[
     "SPAWNED", "RUNNING", "SUSPENDED", "RESOURCE_SUSPENDED",
-    "SLEEPING", "FAILED", "RECOVERING", "QUARANTINED", 
-    "REPLAYING", "TERMINATED"
+    "SUSPENDED_RATE_LIMIT", "SLEEPING", "FAILED", "RECOVERING",
+    "QUARANTINED", "REPLAYING", "TERMINATED"
 ]
 
 class ProcessControlBlock(BaseModel):
@@ -67,6 +67,18 @@ class AgentProcess:
                 "pid": self.pcb.pid, 
                 "resource_type": resource_type,
                 "report": usage_report
+            }
+        ))
+
+    async def suspend_for_rate_limit(self, retry_after_sec: float) -> str:
+        """Rate Limit Suspend: Pauses process due to API limits, recording expected wake barrier."""
+        self.pcb.state = "SUSPENDED_RATE_LIMIT"
+        return await self.engine.emit(SystemEvent(
+            workflow_id=self.pcb.workflow_id,
+            action="PROCESS_RATE_LIMITED",
+            payload={
+                "pid": self.pcb.pid,
+                "retry_after_sec": retry_after_sec
             }
         ))
 

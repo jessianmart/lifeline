@@ -61,6 +61,16 @@ class AbstractEventStore(ABC):
         """Persists a failed event processing to the Dead Letter Queue."""
         pass
 
+    @abstractmethod
+    async def get_dead_letters(self) -> List[dict]:
+        """Retrieves outstanding unprocessed failure records from DLQ."""
+        pass
+
+    @abstractmethod
+    async def delete_dead_letter(self, record_id: int) -> None:
+        """Permanently removes a DLQ record post-recovery."""
+        pass
+
 
 class AbstractSnapshotStore(ABC):
     """

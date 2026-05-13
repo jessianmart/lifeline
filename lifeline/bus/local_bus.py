@@ -14,10 +14,11 @@ class LocalEventBus:
     Decoupled from physical storage, leveraging secure Dead Letter Queues (DLQ)
     to preserve downstream auditability and prevent silent data loss.
     """
-    def __init__(self, dlq_store: Optional[any] = None):
+    def __init__(self, dlq_store: Optional[any] = None, fallback_log_path: str = "dead_letters_fallback.jsonl"):
         self._subscribers: Dict[str, List[EventHandler]] = {}
         self._catch_all_subscribers: List[EventHandler] = []
         self.dlq_store = dlq_store  # Injected AbstractEventStore for failed event recovery
+        self.fallback_log_path = fallback_log_path
 
     def subscribe(self, event_type: str, handler: EventHandler) -> None:
         """Subscribes a handler to a specific event type."""
@@ -47,9 +48,8 @@ class LocalEventBus:
                     
                     # DLQ Injection Routing
                     if self.dlq_store:
+                        tb_str = "".join(traceback.format_exception(type(result), result, result.__traceback__))
                         try:
-                            tb_str = "".join(traceback.format_exception(type(result), result, result.__traceback__))
-                            
                             # Write directly to Secure Ledger Forensics Table
                             await self.dlq_store.store_dead_letter(
                                 event_id=event.event_id,
@@ -59,8 +59,30 @@ class LocalEventBus:
                                 event_payload=event.model_dump_json()
                             )
                         except Exception as dlq_fatal:
-                            # Absolute anti-recursive shield: Write to sys.stderr if SQLite I/O breaks during DLQ insert
-                            print(f"[FATAL DLQ ERROR] Deep corruption prevented DLQ commit: {dlq_fatal}", file=sys.stderr)
+                            # JSONL Escape Hatch: Offload physical I/O asynchronously to prevent asyncio loop starvation
+                            try:
+                                import json
+                                from datetime import datetime, timezone
+                                fallback_record = {
+                                    "event_id": event.event_id,
+                                    "failed_at": datetime.now(timezone.utc).isoformat(),
+                                    "subscriber_name": handler_name,
+                                    "error_message": str(result),
+                                    "stack_trace": tb_str,
+                                    "dlq_fatal_cause": str(dlq_fatal),
+                                    "event_payload": json.loads(event.model_dump_json())
+                                }
+                                
+                                def sync_fallback_write(path, record):
+                                    with open(path, "a", encoding="utf-8") as f_log:
+                                        f_log.write(json.dumps(record) + "\n")
+                                
+                                # Safely execute blocking file I/O on native threadpool
+                                await asyncio.to_thread(sync_fallback_write, self.fallback_log_path, fallback_record)
+                                
+                            except Exception as host_fatal:
+                                # Absolute anti-recursive shield: Write to sys.stderr if local Host disk collapses entirely!
+                                print(f"[CRITICAL SYSTEM FAULT] Dead Letter storage AND JSONL fallback failed: {host_fatal}", file=sys.stderr)
                     else:
                         # Fallback logging when no physical store is attached yet (boot sequence)
                         print(f"[Bus Critical] Missing DLQ sink. Event {event.event_id} processing crashed: {result}", file=sys.stderr)

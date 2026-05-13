@@ -14,6 +14,7 @@ from lifeline.core.exceptions import ExecutionPolicyError
 from lifeline.bus.local_bus import LocalEventBus
 from lifeline.core.events import SystemEvent
 from lifeline.adapters.storage.sqlite import SQLiteEventStore
+from lifeline.engines.redrive_engine import RedriveEngine
 
 class TestLifelineE2E(unittest.IsolatedAsyncioTestCase):
     """
@@ -206,6 +207,102 @@ class TestBroken(unittest.TestCase):
         self.assertEqual(err_msg, "Simulated Downstream Fatal Crash")
         self.assertIn("failing_subscriber", sub_name)
         self.assertIn("RuntimeError", stack)
+
+    async def test_07_dlq_jsonl_async_fallback_on_db_crash(self):
+        """E2E: Simulates full DB crash/corruption during DLQ write, asserting clean async file logging fallback."""
+        from unittest.mock import AsyncMock
+        store = SQLiteEventStore(self.db_file)
+        await store.initialize()
+        
+        fallback_file = f"test_fallback_{self.id().split('.')[-1]}.jsonl"
+        if os.path.exists(fallback_file): os.remove(fallback_file)
+        
+        bus = LocalEventBus(dlq_store=store, fallback_log_path=fallback_file)
+        
+        async def failing_subscriber(event):
+            raise RuntimeError("Fatal App Error")
+            
+        bus.subscribe("system", failing_subscriber)
+        
+        # Mock DB method to RAISE an OperationalError simulating Disk Full / Corrupt file
+        with patch.object(store, "store_dead_letter", new_callable=AsyncMock) as mock_dlq:
+            mock_dlq.side_effect = sqlite3.OperationalError("database or disk is full")
+            
+            event = SystemEvent(action="panic_test")
+            event.seal(parent_hashes=[], logical_clock=0)
+            
+            # Publish: subscriber crashes, then DB crashes, forcing escape hatch!
+            await bus.publish(event)
+            
+            # Yield to ensure async threads completed file I/O
+            await asyncio.sleep(0.5)
+            
+            # Verify the fallback JSONL file now contains the record!
+            self.assertTrue(os.path.exists(fallback_file), "Escape Hatch JSONL was not created on DB crash!")
+            
+            with open(fallback_file, "r") as f:
+                lines = f.readlines()
+                
+            self.assertEqual(len(lines), 1)
+            record = json.loads(lines[0])
+            
+            self.assertEqual(record["event_id"], event.event_id)
+            self.assertEqual(record["error_message"], "Fatal App Error")
+            self.assertIn("database or disk is full", record["dlq_fatal_cause"])
+            
+        # Cleanup
+        if os.path.exists(fallback_file): os.remove(fallback_file)
+
+    async def test_08_redrive_engine_recovery_cycle(self):
+        """E2E: Asserts the complete recovery lifecycle using RedriveEngine: Catch -> Fix -> Re-drive -> Clear."""
+        store = SQLiteEventStore(self.db_file)
+        await store.initialize()
+        bus = LocalEventBus(dlq_store=store)
+        
+        # Stateful subscriber that crashes ONCE and succeeds ONCE
+        execution_log = []
+        
+        async def transient_subscriber(event):
+            if len(execution_log) == 0:
+                execution_log.append("attempt_1_failed")
+                raise RuntimeError("Transient API Crash")
+            else:
+                execution_log.append("attempt_2_success")
+                
+        bus.subscribe("system", transient_subscriber)
+        
+        event = SystemEvent(action="retryable_event")
+        event.seal(parent_hashes=[], logical_clock=0)
+        
+        # First attempt fails -> Writes to DLQ
+        await bus.publish(event)
+        
+        self.assertEqual(len(execution_log), 1)
+        letters_pre = await store.get_dead_letters()
+        self.assertEqual(len(letters_pre), 1, "Dead letter was not logged in SQLite!")
+        
+        # Instantiate Redrive Engine and trigger recovery cycle!
+        redrive_eng = RedriveEngine(store, bus)
+        
+        # Assert programmatic list capability
+        dead_list = await redrive_eng.list_dead_letters()
+        self.assertEqual(len(dead_list), 1)
+        
+        # Execute bulk redrive
+        processed_count = await redrive_eng.redrive_all()
+        self.assertEqual(processed_count, 1, "RedriveEngine did not process the dead letter!")
+        
+        # Yield slightly for thread completions
+        await asyncio.sleep(0.1)
+        
+        # Assertions:
+        # 1. The subscriber ran a second time and SUCCEEDED!
+        self.assertEqual(len(execution_log), 2)
+        self.assertEqual(execution_log[1], "attempt_2_success")
+        
+        # 2. The DLQ record was purged transactionally!
+        letters_post = await store.get_dead_letters()
+        self.assertEqual(len(letters_post), 0, "DLQ record was not purged after successful re-processing!")
 
 if __name__ == "__main__":
     unittest.main()
