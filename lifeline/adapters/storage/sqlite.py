@@ -17,6 +17,9 @@ class SQLiteEventStore(AbstractEventStore):
 
     async def initialize(self):
         async with aiosqlite.connect(self.db_path) as db:
+            # Enable Write-Ahead Logging for High Concurrency write-throughput!
+            await db.execute("PRAGMA journal_mode=WAL;")
+            
             # Base Node Table
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS events (
@@ -39,6 +42,19 @@ class SQLiteEventStore(AbstractEventStore):
                     child_id TEXT NOT NULL,
                     PRIMARY KEY (parent_id, child_id),
                     FOREIGN KEY(child_id) REFERENCES events(event_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Dead Letter Queue for Downstream Processing Audit Recovery
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS dead_letter_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL,
+                    failed_at TEXT NOT NULL,
+                    subscriber_name TEXT,
+                    error_message TEXT NOT NULL,
+                    stack_trace TEXT,
+                    event_payload JSON NOT NULL
                 )
             """)
             
@@ -103,8 +119,13 @@ class SQLiteEventStore(AbstractEventStore):
                         edges
                     )
                 await db.commit()
-        except sqlite3.IntegrityError:
-            pass # Idempotency check on append-only
+        except sqlite3.IntegrityError as e:
+            # Selective Idempotency: peaceful skip ONLY on known primary key/dedup UNIQUE violations
+            if "UNIQUE CONSTRAINT FAILED" in str(e).upper():
+                pass
+            else:
+                raise
+        # Non-Integrity DB errors will bubble up naturally to fail-fast
 
     async def append_batch(self, events: List[EventBase]) -> None:
         async with aiosqlite.connect(self.db_path) as db:
@@ -131,7 +152,7 @@ class SQLiteEventStore(AbstractEventStore):
             try:
                 await db.executemany(
                     """
-                    INSERT OR IGNORE INTO events (
+                    INSERT INTO events (
                         event_id, event_type, logical_clock, timestamp, 
                         workflow_id, agent_id, workflow_node_id, schema_version, deduplication_key, payload
                     )
@@ -145,8 +166,12 @@ class SQLiteEventStore(AbstractEventStore):
                         edge_batch
                     )
                 await db.commit()
-            except sqlite3.Error:
-                pass
+            except sqlite3.IntegrityError as e:
+                # Selective Idempotency for batches
+                if "UNIQUE CONSTRAINT FAILED" in str(e).upper():
+                    pass
+                else:
+                    raise
 
     async def get_event(self, event_id: EventID) -> Optional[EventBase]:
         async with aiosqlite.connect(self.db_path) as db:
@@ -234,6 +259,20 @@ class SQLiteEventStore(AbstractEventStore):
             async with db.execute(query, (parent_id,)) as cursor:
                 rows = await cursor.fetchall()
                 return [self._parse_event(row[0], row[1]) for row in rows]
+
+    async def store_dead_letter(self, event_id: str, subscriber_name: str, error_message: str, stack_trace: str, event_payload: str) -> None:
+        """Persists processing failure payloads directly to secure ledger storage."""
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """
+                INSERT INTO dead_letter_events (event_id, failed_at, subscriber_name, error_message, stack_trace, event_payload)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (event_id, now, subscriber_name, error_message, stack_trace, event_payload)
+            )
+            await db.commit()
 
 
 class SQLiteSnapshotStore(AbstractSnapshotStore):

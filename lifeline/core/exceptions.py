@@ -21,3 +21,7 @@ class StorageError(LifelineError):
 class EventNotFoundError(StorageError):
     """Raised when an requested event is not found in the store."""
     pass
+
+class ExecutionPolicyError(LifelineError):
+    """Raised when execution policy, sandbox bounds, or hardware access is breached."""
+    pass

@@ -56,6 +56,11 @@ class AbstractEventStore(ABC):
         """Fetches immediate causal children of an event."""
         pass
 
+    @abstractmethod
+    async def store_dead_letter(self, event_id: str, subscriber_name: str, error_message: str, stack_trace: str, event_payload: str) -> None:
+        """Persists a failed event processing to the Dead Letter Queue."""
+        pass
+
 
 class AbstractSnapshotStore(ABC):
     """

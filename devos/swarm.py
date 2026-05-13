@@ -15,12 +15,12 @@ class DevOSSwarmOrchestrator:
     The Concurrent Application Supervisor.
     Fires parallel scheduler tasks non-blockingly, inducing massive ledger storm pressure.
     """
-    def __init__(self, db_file: str):
+    def __init__(self, db_file: str, unsafe_allow_host_execution: bool = False):
         from lifeline.adapters.storage.sqlite import SQLiteEventStore
         self.store = SQLiteEventStore(db_file)
         
         self.res_manager = ResourceManager()
-        self.sandbox = IsolatedSandboxExecutor(self.res_manager)
+        self.sandbox = IsolatedSandboxExecutor(self.res_manager, unsafe_allow_host_execution=unsafe_allow_host_execution)
         self.policy_engine = PolicyEngine()
 
     async def bootstrap(self):
@@ -78,64 +78,65 @@ class DevOSSwarmOrchestrator:
         t_start_storm = time.perf_counter()
 
         # Non-blocking dispatch attention loop
-        while loop_active and cycle_count < 5:
-            cycle_count += 1
-            print(f"\n--- [CYCLE {cycle_count}] Multi-Thread Dispatch Scan ---")
-            
-            dispatches = await self.scheduler.evaluate_and_dispatch()
-            print(f"[SCHEDULER] Released {len(dispatches)} Tasks concurrently!")
-            
-            if not dispatches and not self.scheduler._backlog:
-                print("[SYSTEM] No remaining tasks. Causal storm subsided.")
-                break
-
-            # Hardening: Parallel coroutine launching via asyncio.gather!
-            active_coroutines = []
-
-            for dispatch in dispatches:
-                action = dispatch["action"]
-                agent_id = dispatch["agent_id"]
-                payload = dispatch["payload"]
+        try:
+            while loop_active and cycle_count < 5:
+                cycle_count += 1
+                print(f"\n--- [CYCLE {cycle_count}] Multi-Thread Dispatch Scan ---")
                 
-                branch_id = payload["branch_id"]
+                dispatches = await self.scheduler.evaluate_and_dispatch()
+                print(f"[SCHEDULER] Released {len(dispatches)} Tasks concurrently!")
                 
-                # Route correctly based on concurrent task groups
-                if action.startswith("CODE_PATCH"):
-                    coder_inst = coders[agent_id]
-                    file_path = payload["file_to_fix"]
-                    
-                    # Add to parallel batch
-                    active_coroutines.append(
-                        coder_inst.write_patch(file_path, fix_perm_content, branch_id, parent_event_id=root_id)
-                    )
-                    
-                elif action.startswith("RUN_TESTS"):
-                    tester_inst = testers[agent_id]
-                    test_cmd = payload["test_command"]
-                    
-                    # Helper routine to capture parallel outputs
-                    async def run_tester_flow(t_inst, cmd, b_id):
-                        ok = await t_inst.execute_test(cmd, b_id)
-                        if ok:
-                            success_branches.append(b_id)
-                            
-                    active_coroutines.append(run_tester_flow(tester_inst, test_cmd, branch_id))
+                if not dispatches and not self.scheduler._backlog:
+                    print("[SYSTEM] No remaining tasks. Causal storm subsided.")
+                    break
 
-            # EXECUTE BATCH SIMULTANEOUSLY IN PARALLEL
-            if active_coroutines:
-                print(f"[SYSTEM] Firing {len(active_coroutines)} parallel Sandbox threads now...")
-                await asyncio.gather(*active_coroutines)
-                print(f"[SYSTEM] Batch parallel join completed successfully.")
+                # Hardening: Parallel coroutine launching via asyncio.gather!
+                active_coroutines = []
 
-            await asyncio.sleep(0.2)
+                for dispatch in dispatches:
+                    action = dispatch["action"]
+                    agent_id = dispatch["agent_id"]
+                    payload = dispatch["payload"]
+                    
+                    branch_id = payload["branch_id"]
+                    
+                    # Route correctly based on concurrent task groups
+                    if action.startswith("CODE_PATCH"):
+                        coder_inst = coders[agent_id]
+                        file_path = payload["file_to_fix"]
+                        
+                        # Add to parallel batch
+                        active_coroutines.append(
+                            coder_inst.write_patch(file_path, fix_perm_content, branch_id, parent_event_id=root_id)
+                        )
+                        
+                    elif action.startswith("RUN_TESTS"):
+                        tester_inst = testers[agent_id]
+                        test_cmd = payload["test_command"]
+                        
+                        # Helper routine to capture parallel outputs
+                        async def run_tester_flow(t_inst, cmd, b_id):
+                            ok = await t_inst.execute_test(cmd, b_id)
+                            if ok:
+                                success_branches.append(b_id)
+                                
+                        active_coroutines.append(run_tester_flow(tester_inst, test_cmd, branch_id))
+
+                # EXECUTE BATCH SIMULTANEOUSLY IN PARALLEL
+                if active_coroutines:
+                    print(f"[SYSTEM] Firing {len(active_coroutines)} parallel Sandbox threads now...")
+                    await asyncio.gather(*active_coroutines)
+                    print(f"[SYSTEM] Batch parallel join completed successfully.")
+
+                await asyncio.sleep(0.2)
+        finally:
+            # Cleanup all processes
+            await planner.process.terminate()
+            for c in coders.values(): await c.process.terminate()
+            for t in testers.values(): await t.process.terminate()
 
         t_end_storm = time.perf_counter()
         total_storm_time = t_end_storm - t_start_storm
-
-        # Cleanup all processes
-        await planner.process.terminate()
-        for c in coders.values(): await c.process.terminate()
-        for t in testers.values(): await t.process.terminate()
 
         # Print physical storm statistics
         print("\n==================================================")

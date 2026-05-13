@@ -58,7 +58,7 @@ async def main():
     return 42
 """
 
-    swarm = DevOSSwarmOrchestrator(db_file)
+    swarm = DevOSSwarmOrchestrator(db_file, unsafe_allow_host_execution=True)
     await swarm.bootstrap()
 
     try:

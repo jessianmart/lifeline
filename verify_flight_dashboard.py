@@ -40,7 +40,7 @@ async def main():
     generate_broken_workspace(branch_count)
     fix_patch = "def execute_core_computation(): return 42\n"
 
-    swarm = DevOSSwarmOrchestrator(db_file)
+    swarm = DevOSSwarmOrchestrator(db_file, unsafe_allow_host_execution=True)
     await swarm.bootstrap()
 
     print("[SIM] Launching Concurrent Causal Workload with active Profiler Sensors...\n")
@@ -109,7 +109,7 @@ async def main():
         print("[AUDIT] Re-Scanning tainted Ledger stream...")
         
         # Force fresh audit (Rebuild engine to avoid cached memory objects)
-        fresh_swarm = DevOSSwarmOrchestrator(db_file)
+        fresh_swarm = DevOSSwarmOrchestrator(db_file, unsafe_allow_host_execution=True)
         await fresh_swarm.bootstrap()
         fresh_replay = ReplayEngine(fresh_swarm.event_engine)
         

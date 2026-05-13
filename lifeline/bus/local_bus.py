@@ -1,5 +1,7 @@
 import asyncio
-from typing import Callable, Dict, List, Awaitable
+import sys
+import traceback
+from typing import Callable, Dict, List, Awaitable, Optional
 
 from lifeline.core.events import EventBase
 from lifeline.core.types import EventID
@@ -8,12 +10,14 @@ EventHandler = Callable[[EventBase], Awaitable[None]]
 
 class LocalEventBus:
     """
-    In-memory event bus for dispatching events to subscribers (engines, projections, memory).
-    Crucial for decoupling Event Generation from Storage, Projections, and State Reconstruction.
+    High-Resiliency in-memory event bus for dispatching events to subscribers.
+    Decoupled from physical storage, leveraging secure Dead Letter Queues (DLQ)
+    to preserve downstream auditability and prevent silent data loss.
     """
-    def __init__(self):
+    def __init__(self, dlq_store: Optional[any] = None):
         self._subscribers: Dict[str, List[EventHandler]] = {}
         self._catch_all_subscribers: List[EventHandler] = []
+        self.dlq_store = dlq_store  # Injected AbstractEventStore for failed event recovery
 
     def subscribe(self, event_type: str, handler: EventHandler) -> None:
         """Subscribes a handler to a specific event type."""
@@ -33,10 +37,30 @@ class LocalEventBus:
         # Dispatch to all handlers concurrently
         if handlers:
             tasks = [handler(event) for handler in handlers]
-            # Use return_exceptions=True so one failing handler doesn't crash the bus
+            # Use return_exceptions=True to isolate subscriber crashes
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
+            
+            for idx, result in enumerate(results):
                 if isinstance(result, Exception):
-                    # In a production system, this would go to a DLQ or Observability
-                    # For now, we print or log it.
-                    print(f"[Bus Error] Error handling event {event.event_id}: {result}")
+                    handler = handlers[idx]
+                    handler_name = getattr(handler, "__name__", str(handler))
+                    
+                    # DLQ Injection Routing
+                    if self.dlq_store:
+                        try:
+                            tb_str = "".join(traceback.format_exception(type(result), result, result.__traceback__))
+                            
+                            # Write directly to Secure Ledger Forensics Table
+                            await self.dlq_store.store_dead_letter(
+                                event_id=event.event_id,
+                                subscriber_name=handler_name,
+                                error_message=str(result),
+                                stack_trace=tb_str,
+                                event_payload=event.model_dump_json()
+                            )
+                        except Exception as dlq_fatal:
+                            # Absolute anti-recursive shield: Write to sys.stderr if SQLite I/O breaks during DLQ insert
+                            print(f"[FATAL DLQ ERROR] Deep corruption prevented DLQ commit: {dlq_fatal}", file=sys.stderr)
+                    else:
+                        # Fallback logging when no physical store is attached yet (boot sequence)
+                        print(f"[Bus Critical] Missing DLQ sink. Event {event.event_id} processing crashed: {result}", file=sys.stderr)
