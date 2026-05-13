@@ -34,6 +34,41 @@ class ReplayEngine:
                 await asyncio.sleep(step_delay)
         return event_count
 
+    async def verify_execution_drift(self, workflow_id: str) -> tuple[bool, str]:
+        """
+        Comprehensive Causal Drift Audit.
+        Inspects the complete lineage chain to detect:
+        - Reversed Lamport clock jumps.
+        - Phantom/non-existent parent hashes.
+        - Parent events created AFTER their children (Temporal Paradoxes).
+        Returns (has_drift, diagnostic_message).
+        """
+        events: List[EventBase] = []
+        async for event in self.event_engine.get_workflow_stream(workflow_id):
+            events.append(event)
+            
+        if not events:
+            return False, "Workflow ledger is pristine: Empty track."
+            
+        # Index by ID for instant O(1) topological scans
+        ledger_map = {e.event_id: e for e in events}
+        
+        # 1. Audit Clock Sequences and Causality Ancestry
+        for event in events:
+            current_clock = event.logical_clock
+            
+            for parent_id in event.parent_event_ids:
+                if parent_id not in ledger_map:
+                    return True, f"PHANTOM ANCESTRY DRIFT: Event {event.event_id[:8]} references non-existent parent '{parent_id[:8]}'."
+                
+                parent_event = ledger_map[parent_id]
+                
+                # Critical Causal Invariant: Child logical clock MUST be strictly GREATER than all parent clocks.
+                if current_clock <= parent_event.logical_clock:
+                    return True, f"CLOCK DRIFT DETECTED: Event {event.event_id[:8]} (Clock {current_clock}) violates causality of parent {parent_id[:8]} (Clock {parent_event.logical_clock}). Clock regression identified."
+
+        return False, "Ledger integrity verified: Zero Causal Drifts detected."
+
     async def start_physical_replay_session(self, workflow_id: str, replay_mode: Literal["mock", "live"] = "mock") -> "PhysicalReplaySession":
         """
         Initializes a Physical Replay Session.

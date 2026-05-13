@@ -111,6 +111,20 @@ class CognitiveScheduler:
             }
             dispatched_envelopes.append(envelope)
 
+        # 6. RECORD KERNEL METRICS (Introspection)
+        from lifeline.adapters.observability.profiler import kernel_profiler
+        
+        # Distinguish between topological blocks and active dispatches
+        blocked_count = len(remaining_backlog)
+        pending_count = len(self._backlog)
+        active_count = len(getattr(self.resource_manager, "_quotas", {}).keys())
+        
+        kernel_profiler.record_scheduler_tick(
+            pending=pending_count,
+            blocked=blocked_count,
+            active_count=active_count
+        )
+
         # Update active queue
         self._backlog = remaining_backlog
         return dispatched_envelopes

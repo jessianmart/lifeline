@@ -70,6 +70,11 @@ class ContextEngine:
         Retrieves, filters, and synthesizes the optimal operational cognitive model.
         Utilizes caching keyed deterministically by absolute logical clocks.
         """
+        import time
+        from lifeline.adapters.observability.profiler import kernel_profiler
+        
+        t_start = time.perf_counter()
+
         # 0. Determine the boundary of state via current logical clock for Cache evaluation
         latest_event = await self.store.get_latest_workflow_event(workflow_id)
         current_clock = latest_event.logical_clock if latest_event else -1
@@ -83,7 +88,11 @@ class ContextEngine:
             cached_payload = self._cache.get(workflow_id, current_clock, ctx_ver, asmb_ver)
             if cached_payload:
                 # CACHE DETERMINISTIC HIT! We bypass Federated Query completely!
+                t_end = time.perf_counter()
+                kernel_profiler.record_context_assembly((t_end - t_start)*1000, is_hit=True)
                 return cached_payload
+
+        # Cache Miss - Proceed to full query reconstruction
 
         # 1. Federated Querying (Conductor)
         raw_materials = await self.retrieval.retrieve_raw_context(workflow_id, current_event_id)
@@ -112,4 +121,7 @@ class ContextEngine:
         if not current_event_id:
             self._cache.set(workflow_id, current_clock, ctx_ver, asmb_ver, payload)
             
+        t_end = time.perf_counter()
+        kernel_profiler.record_context_assembly((t_end - t_start)*1000, is_hit=False)
+
         return payload
