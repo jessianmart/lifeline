@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import httpx                         # noqa: E402
 import lifeline.mcp_server as srv     # noqa: E402
 from lifeline import cli             # noqa: E402
 from lifeline.mcp_server import mcp  # noqa: E402
@@ -55,6 +56,55 @@ class TestMCPBackendAndHITL(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(await cli.cmd_review(db)), 1)   # entrou na fila…
         _, n = await cli.cmd_verify(db)
         self.assertEqual(n, 0)                                # …e NÃO na line (0 entradas seladas)
+
+
+class TestOAuthResourceServer(unittest.IsolatedAsyncioTestCase):
+    def _verifier(self, handler):
+        return srv.SupabaseTokenVerifier(url="https://proj.supabase.co", key="anon",
+                                         transport=httpx.MockTransport(handler))
+
+    async def test_valid_token_returns_access_token(self):
+        seen = []
+
+        def handler(req):
+            seen.append(req)
+            return httpx.Response(200, json={"id": "user-123", "email": "a@b.c"})
+
+        at = await self._verifier(handler).verify_token("jwt-xyz")
+        self.assertIsNotNone(at)
+        self.assertEqual(at.token, "jwt-xyz")        # carrega o JWT p/ escopar a RLS por usuário
+        self.assertEqual(at.client_id, "user-123")   # user id do Supabase
+        req = seen[0]
+        self.assertTrue(str(req.url).endswith("/auth/v1/user"))
+        self.assertEqual(req.headers["apikey"], "anon")
+        self.assertEqual(req.headers["authorization"], "Bearer jwt-xyz")
+
+    async def test_invalid_token_returns_none(self):
+        at = await self._verifier(lambda req: httpx.Response(401, json={"msg": "bad"})).verify_token("nope")
+        self.assertIsNone(at)                         # 401 → rejeitado
+
+    async def test_missing_config_returns_none(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            v = srv.SupabaseTokenVerifier()           # sem url/key
+        self.assertIsNone(await v.verify_token("whatever"))
+
+    def test_build_remote_with_oauth_serves_metadata(self):
+        self.addCleanup(lambda: cli._STORE.update(kind="sqlite", line="ledger"))
+        env = {"LIFELINE_OAUTH": "1", "LIFELINE_STORE": "supabase",
+               "SUPABASE_URL": "https://proj.supabase.co", "SUPABASE_KEY": "anon"}
+        with mock.patch.dict(os.environ, env):
+            srv._configure()
+            server = srv._build_remote()
+        self.assertIsNotNone(server.settings.auth)    # virou Resource Server
+        paths = {getattr(r, "path", "") for r in server.sse_app().routes}
+        self.assertTrue(any("oauth-protected-resource" in p for p in paths), paths)  # discovery
+
+    def test_build_remote_without_oauth_is_plain(self):
+        self.addCleanup(lambda: cli._STORE.update(kind="sqlite", line="ledger"))
+        with mock.patch.dict(os.environ, {}, clear=True):
+            srv._configure()
+            server = srv._build_remote()
+        self.assertIs(server, srv.mcp)                # sem OAuth → servidor base (single-tenant via env)
 
 
 if __name__ == "__main__":

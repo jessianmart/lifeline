@@ -922,3 +922,17 @@ Com SUPABASE_URL/KEY/TOKEN do .env, rodei os 3 testes live contra o projeto real
 
 **Body**:
 Expoe a superficie MCP por HTTP (nao so stdio), pra IA conectar de fora. (1) mcp_server.py virou store-agnostico: resource/recall usam o factory _open da CLI; _configure() escolhe backend/line por env (LIFELINE_STORE=supabase usa SUPABASE_URL/KEY/TOKEN, default sqlite). (2) Novo entry-point lifeline-mcp-remote (main_remote): serve sobre SSE (/sse + /messages) ou streamable-http (/mcp), bind por LIFELINE_MCP_HOST/PORT. Mesmas tools: leitura (context+recall) e escrita HITL (append/recontextualize PROPOEM, nao commitam). (3) Testes: surface registrada (incl. recall), _configure escolhe backend por env, e a tool de escrita e HITL (proposta pendente, 0 na line). uvicorn/starlette ja presentes; sse_app/streamable_http_app constroem com rotas. Suite 63/63 (+3 live skip). CORRECAO de rota honesta: NAO roda em Supabase Edge Functions (Deno); e servidor Python, hospedavel em qualquer free-tier (Fly/Render/Railway) com o Supabase de store. FALTA: OAuth 2.1 no endpoint (exigido pelos conectores claude.ai/ChatGPT/Gemini) + multi-tenant por JWT de usuario — proximo incremento; a RLS (owner=auth.uid) ja esta pronta pra isso.
+
+### #0047 — 2026-05-31T03:24:06.782024+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: OAuth Resource Server no MCP remoto (LIFELINE_OAUTH=1): valida JWT Supabase por requisicao, escopa RLS por usuario (multi-tenant), serve protected-resource metadata
+- **parents**: b32f078a50841724b298bb77e3e1789678d7012421c77498e2acd983403b484d
+- **id**: f22de1252177e82439f182098dca8524ff77ffc15c24e4b528e1cddc652b0e79
+
+**Body**:
+A ultima milha do M3, na parte que da pra fechar+testar aqui. (1) SupabaseTokenVerifier (TokenVerifier do SDK): valida o Bearer contra /auth/v1/user; 200->AccessToken carregando o proprio JWT + user id; 401->None. Transporte httpx injetavel p/ teste. (2) Binding por-requisicao: _request_token() le o token validado (get_access_token), e _open_request/_staging_request constroem o store/staging com o JWT DAQUELE usuario -> RLS escopa por owner=auth.uid() = multi-tenant real (sem isso era single-tenant via env). (3) _register() passou a registrar a superficie em qualquer instancia FastMCP; _build_remote() liga o Resource Server quando LIFELINE_OAUTH=1 (+supabase+creds): FastMCP(token_verifier, AuthSettings(issuer,resource_server_url)) -> exige Bearer e publica GET /.well-known/oauth-protected-resource (RFC 9728). (4) Testes: verifier valido/invalido/sem-config, build com OAuth serve metadata, build sem OAuth = servidor base. Suite 68/68 (+3 live skip). HONESTO: o lado Authorization Server (DCR + authorization-code) que claude.ai/ChatGPT/Gemini dirigem NAO esta feito — o Supabase Auth nao e AS OAuth2 generico com DCR; rotas (AS shim / provedor com DCR / aguardar Supabase) documentadas em docs/MCP_REMOTE.md. Em todas, o nosso RS nao muda. Da p/ conectar JA com um JWT em mao (claude mcp add --header).

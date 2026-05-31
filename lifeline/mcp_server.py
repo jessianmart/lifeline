@@ -1,47 +1,82 @@
 """Superfície MCP — a interface da IA é o produto (Lei #7).
 
-  - LER ao conectar:  resource `lifeline://project/context` (a linha de vida montada) e
-    a tool `lifeline_recall` (relevância ancorada).
-  - PROPOR ao trabalhar:  tools `lifeline_append` / `lifeline_recontextualize` — a escrita
-    da IA é HITL (human-in-the-loop): vira uma PROPOSTA pendente; um humano aprova via
-    `lifeline review`/`approve` antes de entrar na line. Assim a IA dirige a captura sem
-    poder sujar a verdade — quem cura é o humano (como aprovar um comando shell).
+  - LER ao conectar:  resource `lifeline://project/context` + tool `lifeline_recall`.
+  - PROPOR ao trabalhar:  `lifeline_append` / `lifeline_recontextualize` — escrita HITL:
+    vira PROPOSTA pendente; um humano aprova antes de entrar na line.
 
-A MESMA superfície roda em dois transportes e dois backends:
-  - LOCAL (stdio, SQLite):   LIFELINE_DB=.lifeline/ledger.db  lifeline-mcp
+Três modos, mesma superfície (registrada por `_register`):
+  - LOCAL (stdio, SQLite):   LIFELINE_DB=…  lifeline-mcp
   - REMOTO (HTTP/SSE, nuvem): LIFELINE_STORE=supabase  SUPABASE_URL/KEY/TOKEN=…  lifeline-mcp-remote
+  - REMOTO + OAuth (multi-tenant): idem, e o servidor vira um OAuth Resource Server —
+    valida o Bearer JWT de CADA requisição (Supabase) e escopa o store por usuário
+    (RLS `owner=auth.uid()`). Liga com LIFELINE_OAUTH=1.
 
-O backend é escolhido pelo factory da CLI (`_open`/`_staging` via `_STORE`); aqui só
-configuramos e servimos — sem duplicar lógica.
+Honestidade (#0046/#0047): o Resource Server (validação de token + metadata de
+protected-resource + multi-tenant) está pronto e testado aqui. O Authorization Server
+completo (DCR + authorization-code) que os conectores claude.ai/ChatGPT/Gemini exigem
+depende de um AS compatível — o Supabase Auth não é um AS OAuth genérico com DCR. Ver
+docs/MCP_REMOTE.md.
 """
 import os
+from typing import Optional
 
+import httpx
+from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.fastmcp import FastMCP
 
-from lifeline.cli import cmd_propose, _open, _STORE
+from lifeline.cli import _STORE, _open, _staging, _validate
 
-mcp = FastMCP("Lifeline")
 _DB = os.environ.get("LIFELINE_DB", os.path.join(".lifeline", "ledger.db"))
 _AUTHOR = os.environ.get("LIFELINE_AUTHOR", "mcp")
 
 
 def _configure() -> None:
-    """Escolhe backend/line pelo ambiente. LIFELINE_STORE=supabase usa SUPABASE_URL/KEY/TOKEN;
-    default = SQLite local. Configura o mesmo `_STORE` que a CLI usa em _open/_staging."""
+    """Escolhe backend/line pelo ambiente (mesmo `_STORE` que a CLI usa em _open/_staging)."""
     _STORE["kind"] = os.environ.get("LIFELINE_STORE", "sqlite")
     _STORE["line"] = os.environ.get("LIFELINE_LINE", "ledger")
 
 
-@mcp.resource("lifeline://project/context")
+# ---- multi-tenant: token do usuário (do request OAuth) escopa o store por RLS -------------
+
+def _request_token() -> Optional[str]:
+    """JWT do usuário autenticado nesta requisição (None fora de contexto/sem auth)."""
+    try:
+        from mcp.server.auth.middleware.auth_context import get_access_token
+        at = get_access_token()
+        return at.token if at else None
+    except Exception:
+        return None
+
+
+async def _open_request():
+    """Store da requisição: na nuvem com token de usuário → escopa por RLS; senão, factory padrão."""
+    tok = _request_token()
+    if _STORE["kind"] == "supabase" and tok:
+        from lifeline.cloud import SupabaseEventStore
+        s = SupabaseEventStore(line=_STORE["line"], token=tok)
+        await s.initialize()
+        return s
+    return await _open(_DB)
+
+
+def _staging_request():
+    tok = _request_token()
+    if _STORE["kind"] == "supabase" and tok:
+        from lifeline.cloud import SupabaseStagingStore
+        return SupabaseStagingStore(line=_STORE["line"], token=tok)
+    return _staging(_DB)
+
+
+# ---- handlers (registrados em qualquer instância FastMCP por _register) -------------------
+
 async def project_context() -> str:
     """O contexto do projeto, montado e dentro do budget — leia isto ao conectar."""
     from lifeline.context import ContextAssembler
     from lifeline.state import StateEngine
-    store = await _open(_DB)
+    store = await _open_request()
     return await ContextAssembler(StateEngine(store)).assemble()
 
 
-@mcp.tool()
 async def lifeline_append(kind: str, summary: str, body: str = "",
                           agent: str = "mcp-agent", provider: str = "none",
                           model: str = "unknown") -> str:
@@ -49,13 +84,16 @@ async def lifeline_append(kind: str, summary: str, body: str = "",
     PENDENTE — um humano aprova via `lifeline review`/`approve` antes de virar parte da line
     (HITL). O *porquê* importa mais que o *quê* — diga-o no body (obrigatório)."""
     try:
-        pid = await cmd_propose(_DB, kind, summary, body, _AUTHOR, agent, provider, model, None)
+        _validate(kind, body)
     except ValueError as ex:
         return f"recusado: {ex}"
+    staging = _staging_request()
+    await staging.initialize()
+    pid = await staging.propose(kind=kind, summary=summary, body=body, author=_AUTHOR,
+                                agent=agent, provider=provider, model=model, parents=None)
     return f"proposta #{pid} enfileirada ({kind}) — PENDENTE de aprovação humana (lifeline review)"
 
 
-@mcp.tool()
 async def lifeline_recontextualize(parent_id: str, summary: str, body: str = "",
                                    agent: str = "mcp-agent", provider: str = "none",
                                    model: str = "unknown") -> str:
@@ -63,18 +101,21 @@ async def lifeline_recontextualize(parent_id: str, summary: str, body: str = "",
     fechada, fato atualizado). Append-only, nunca edição (Lei #2). Fica PENDENTE até um
     humano aprovar (HITL). Diga o *porquê* da mudança no body (obrigatório)."""
     try:
-        pid = await cmd_propose(_DB, "correction", summary, body, _AUTHOR, agent, provider, model, [parent_id])
+        _validate("correction", body)
     except ValueError as ex:
         return f"recusado: {ex}"
+    staging = _staging_request()
+    await staging.initialize()
+    pid = await staging.propose(kind="correction", summary=summary, body=body, author=_AUTHOR,
+                                agent=agent, provider=provider, model=model, parents=[parent_id])
     return f"correção proposta #{pid} (supersede {parent_id[:12]}) — PENDENTE de aprovação"
 
 
-@mcp.tool()
 async def lifeline_recall(query: str, k: int = 5) -> str:
     """Recupera as entradas mais RELEVANTES à tarefa atual (Camada 3 — ancoradas).
     Use para "já decidimos algo sobre X?" sem ler o ledger inteiro. Relevância, não recência."""
     from lifeline.recall import SemanticRecall
-    store = await _open(_DB)
+    store = await _open_request()
     hits = await SemanticRecall(store).search(query, k=k)
     if not hits:
         return "Nada relevante encontrado no ledger."
@@ -83,23 +124,79 @@ async def lifeline_recall(query: str, k: int = 5) -> str:
     )
 
 
+def _register(server: FastMCP) -> FastMCP:
+    """Registra a MESMA superfície em qualquer instância (com ou sem auth)."""
+    server.resource("lifeline://project/context")(project_context)
+    server.tool()(lifeline_append)
+    server.tool()(lifeline_recontextualize)
+    server.tool()(lifeline_recall)
+    return server
+
+
+# instância default (local/stdio e testes) — sem auth
+mcp = _register(FastMCP("Lifeline"))
+
+
+# ---- OAuth Resource Server (multi-tenant) -------------------------------------------------
+
+class SupabaseTokenVerifier(TokenVerifier):
+    """Valida o Bearer JWT contra o Supabase (`/auth/v1/user`). Token válido → AccessToken
+    carregando o próprio JWT (usado p/ escopar a RLS por usuário) e o user id. `transport`
+    injetável p/ teste."""
+
+    def __init__(self, url: Optional[str] = None, key: Optional[str] = None, transport=None):
+        self.url = (url or os.environ.get("SUPABASE_URL", "")).rstrip("/")
+        self.key = key or os.environ.get("SUPABASE_KEY")
+        self._transport = transport
+
+    async def verify_token(self, token: str) -> Optional[AccessToken]:
+        if not (self.url and self.key and token):
+            return None
+        async with httpx.AsyncClient(timeout=15, transport=self._transport) as c:
+            r = await c.get(f"{self.url}/auth/v1/user",
+                            headers={"apikey": self.key, "Authorization": f"Bearer {token}"})
+        if r.status_code != 200:
+            return None  # inválido/expirado → 401
+        uid = (r.json() or {}).get("id", "unknown")
+        return AccessToken(token=token, client_id=uid, scopes=["lifeline"], expires_at=None)
+
+
+def _build_remote() -> FastMCP:
+    """Servidor remoto. Com LIFELINE_OAUTH=1 (+ supabase + creds) vira Resource Server OAuth:
+    exige Bearer válido e escopa por usuário. Senão, serve sem auth (single-tenant via env)."""
+    oauth = os.environ.get("LIFELINE_OAUTH") == "1"
+    if oauth and _STORE["kind"] == "supabase" and os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY"):
+        from mcp.server.auth.settings import AuthSettings
+        issuer = os.environ.get("LIFELINE_OAUTH_ISSUER",
+                                f"{os.environ['SUPABASE_URL'].rstrip('/')}/auth/v1")
+        port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
+        resource = os.environ.get("LIFELINE_MCP_PUBLIC_URL", f"http://localhost:{port}")
+        return _register(FastMCP(
+            "Lifeline",
+            token_verifier=SupabaseTokenVerifier(),
+            auth=AuthSettings(issuer_url=issuer, resource_server_url=resource, required_scopes=[]),
+        ))
+    return mcp
+
+
 def main():
-    """Entry point (console script `lifeline-mcp`) — serve via stdio (local)."""
+    """Entry point (`lifeline-mcp`) — serve via stdio (local)."""
     _configure()
     mcp.run()
 
 
 def main_remote():
-    """Entry point (`lifeline-mcp-remote`) — serve a MESMA superfície por HTTP/SSE.
+    """Entry point (`lifeline-mcp-remote`) — serve por HTTP/SSE (superfície remota).
 
-    Backend via LIFELINE_STORE (supabase → SUPABASE_URL/KEY/TOKEN). Bind via
-    LIFELINE_MCP_HOST/PORT (default 0.0.0.0:8000). Transporte: LIFELINE_MCP_TRANSPORT
-    ('sse' default ou 'streamable-http'). Escrita continua HITL (propõe, não commita).
+    Bind via LIFELINE_MCP_HOST/PORT (default 0.0.0.0:8000); transporte
+    LIFELINE_MCP_TRANSPORT ('sse' default ou 'streamable-http'). LIFELINE_OAUTH=1 liga o
+    Resource Server (Bearer obrigatório, multi-tenant). Escrita continua HITL.
     """
     _configure()
-    mcp.settings.host = os.environ.get("LIFELINE_MCP_HOST", "0.0.0.0")
-    mcp.settings.port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
-    mcp.run(transport=os.environ.get("LIFELINE_MCP_TRANSPORT", "sse"))
+    server = _build_remote()
+    server.settings.host = os.environ.get("LIFELINE_MCP_HOST", "0.0.0.0")
+    server.settings.port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
+    server.run(transport=os.environ.get("LIFELINE_MCP_TRANSPORT", "sse"))
 
 
 if __name__ == "__main__":

@@ -38,17 +38,42 @@ Functions (essas são Deno/TypeScript). Rotas de custo-zero/baixo:
 
 O Supabase segue de graça como **store** (Postgres+RLS); o host só roda o processo MCP.
 
-## Conectar nas IAs de chat — o que falta (sem overclaim)
+## OAuth / multi-tenant (Resource Server) — `LIFELINE_OAUTH=1`
 
-Os conectores de **claude.ai / ChatGPT / Gemini** exigem **OAuth 2.1** no endpoint MCP
-(discovery + autorização). Este servidor **ainda não tem OAuth** — então hoje ele conecta
-em clientes MCP que aceitam uma URL crua (clientes próprios, a ponte `mcp-remote`,
-`claude mcp add --transport sse <url>`). Wirar o OAuth pros conectores hospedados é o
-**próximo incremento**.
+Ligue com `LIFELINE_OAUTH=1` (+ `LIFELINE_STORE=supabase` + `SUPABASE_URL`/`KEY`). O servidor
+vira um **OAuth 2.1 Resource Server**:
 
-Relacionado: hoje o servidor é **single-tenant** (usa UM `SUPABASE_TOKEN` do ambiente).
-O multi-tenant de verdade (cada usuário autentica e o servidor usa o JWT dele) vem junto
-com o OAuth — a tabela e a RLS já estão prontas pra isso (`owner = auth.uid()`).
+- Exige `Authorization: Bearer <JWT do usuário>` em cada requisição; valida contra o Supabase
+  (`/auth/v1/user`). Inválido/expirado → **401**.
+- Escopa o store pelo **JWT daquele usuário** → multi-tenant real via RLS (`owner=auth.uid()`):
+  cada usuário só vê/propõe na própria line. (Sem `LIFELINE_OAUTH`, é single-tenant via o
+  `SUPABASE_TOKEN` do ambiente.)
+- Publica o **discovery** em `GET /.well-known/oauth-protected-resource` (RFC 9728), apontando
+  o Authorization Server (`LIFELINE_OAUTH_ISSUER`, default `…/auth/v1`).
+
+```bash
+export LIFELINE_OAUTH=1 LIFELINE_STORE=supabase
+export SUPABASE_URL=… SUPABASE_KEY=<apikey>
+export LIFELINE_MCP_PUBLIC_URL=https://seu-host   # url pública (vai no metadata)
+lifeline-mcp-remote
+```
+
+**Conectar JÁ (com um JWT em mãos):** clientes que aceitam header — ex.:
+`claude mcp add --transport sse lifeline https://seu-host/sse --header "Authorization: Bearer <jwt>"`.
+
+## O que ainda é validação-ao-vivo (sem overclaim)
+
+O **Resource Server** acima (validação de token + metadata + multi-tenant) está pronto e
+**testado**. Falta o lado **Authorization Server** que os conectores hospedados
+(claude.ai/ChatGPT/Gemini) dirigem sozinhos: **Dynamic Client Registration + authorization-code
+(PKCE)**. O **Supabase Auth não é um AS OAuth2 genérico com DCR** — então o "clicar conectar"
+no claude.ai precisa de uma das rotas, a validar ao vivo:
+
+- um **AS shim** (endpoints `/authorize`,`/token`,`/register`) na frente do Supabase Auth, ou
+- um provedor com DCR (Auth0/WorkOS/Keycloak) emitindo o JWT que o nosso RS valida, ou
+- aguardar suporte a DCR no Supabase.
+
+Em todos, **o nosso RS não muda** — ele já valida o JWT e escopa por usuário.
 
 ## Segurança
 
