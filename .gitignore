@@ -1,17 +1,24 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Databases (SQLite Simulation Files)
+# Cache de runtime do Lifeline — NÃO é a fonte versionada.
+# Reconstrua com: python -m lifeline migrate --from LIFELINE.md
+.lifeline/
 *.db
-*.db-journal
+*.db-wal
+*.db-shm
 
-# Virtual Environments
-venv/
-.venv/
-env/
+# segredos — NUNCA versionar (keys do Supabase etc.)
+.env
+*.env
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# backups e snapshots/provas gerados
+*.bak
+CONTEXT_SNAPSHOT.md
+FIRETEST_SNAPSHOT.md
+EXAM_prompt.md
+EXAM_key.md
+
+__pycache__/
+*.pyc
+
+# caches de build/test
+*.egg-info/
+.pytest_cache/

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lifeline": {
+      "command": "lifeline-mcp",
+      "args": [],
+      "env": { "LIFELINE_DB": ".lifeline/ledger.db" }
+    }
+  }
+}
