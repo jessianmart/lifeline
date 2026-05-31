@@ -22,3 +22,8 @@ lifeline-mcp = "lifeline.mcp_server:main"
 # (packages=["lifeline"] que excluía subpacotes), caso subpacotes surjam.
 [tool.setuptools.packages.find]
 include = ["lifeline*"]
+
+# `_legacy/` é a rev0 arquivada (importa a API antiga). Nunca coletar como teste.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["_legacy", "scripts", "build", "dist", ".*"]
