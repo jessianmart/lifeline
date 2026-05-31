@@ -17,13 +17,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import httpx  # noqa: E402
 
 from lifeline.entry import Entry            # noqa: E402
-from lifeline.cloud import SupabaseEventStore  # noqa: E402
+from lifeline.cloud import SupabaseEventStore, SupabaseStagingStore  # noqa: E402
 
 
 def _store(handler, line="ledger"):
     """SupabaseEventStore com transporte mockado — sem rede, sem banco."""
     return SupabaseEventStore(line=line, url="https://proj.supabase.co",
                               key="test-key", transport=httpx.MockTransport(handler))
+
+
+def _staging(handler, line="ledger"):
+    """SupabaseStagingStore com transporte mockado."""
+    return SupabaseStagingStore(line=line, url="https://proj.supabase.co",
+                                key="proj-anon", token="user-jwt", transport=httpx.MockTransport(handler))
 
 
 class TestSupabaseWire(unittest.IsolatedAsyncioTestCase):
@@ -136,12 +142,61 @@ class TestCLIStoreGuard(unittest.TestCase):
         import lifeline.cli as cli
         # não vazar o store global para outros testes do processo
         self.addCleanup(lambda: cli._STORE.update(kind="sqlite", line="ledger"))
-        # args mínimos p/ o argparse passar e a guarda (pós-parse) ser exercida
-        extra = {"clone": ["a", "b"], "approve": ["all"], "reject": ["all"],
-                 "propose": ["--kind", "note", "--summary", "x"]}
-        for cmd in ("push", "pull", "clone", "lines", "propose", "review", "approve", "reject"):
+        # só git/glob-local são barrados; o HITL agora roda na nuvem (SupabaseStagingStore)
+        extra = {"clone": ["a", "b"]}
+        for cmd in ("push", "pull", "clone", "lines"):
             argv = ["--store", "supabase", cmd] + extra.get(cmd, [])
             self.assertEqual(cli.main(argv), 1, f"{cmd} deveria ser rejeitado no modo supabase")
+
+
+class TestSupabaseStagingWire(unittest.IsolatedAsyncioTestCase):
+    async def test_propose_posts_and_returns_pid(self):
+        seen = []
+
+        def handler(req):
+            seen.append(req)
+            return httpx.Response(201, json=[{"pid": 7}])
+
+        pid = await _staging(handler).propose(
+            kind="decision", summary="usar gRPC", body="porque escala",
+            author="ia", agent="claude", provider="anthropic", model="m", parents=["abc"])
+        self.assertEqual(pid, 7)
+        req = seen[0]
+        self.assertEqual(req.method, "POST")
+        self.assertIn("return=representation", req.headers["prefer"])  # precisa do pid de volta
+        body = json.loads(req.content)
+        self.assertEqual(body["summary"], "usar gRPC")
+        self.assertEqual(body["line"], "ledger")
+        self.assertEqual(body["parents"], ["abc"])
+
+    async def test_pending_filters_and_normalizes_parents(self):
+        seen = []
+
+        def handler(req):
+            seen.append(req)
+            return httpx.Response(200, json=[{"pid": 1, "status": "pending", "parents": ["p1"], "summary": "s"}])
+
+        rows = await _staging(handler).pending()
+        self.assertEqual(seen[0].url.params["status"], "eq.pending")
+        self.assertEqual(seen[0].url.params["line"], "eq.ledger")
+        # parents (jsonb→lista) normalizado p/ string JSON, igual ao SQLite → cmd_approve agnóstico
+        self.assertEqual(rows[0]["parents"], '["p1"]')
+
+    async def test_get_returns_none_when_absent(self):
+        self.assertIsNone(await _staging(lambda req: httpx.Response(200, json=[])).get(99))
+
+    async def test_set_status_patches_by_pid(self):
+        seen = []
+
+        def handler(req):
+            seen.append(req)
+            return httpx.Response(204)
+
+        await _staging(handler).set_status(5, "approved")
+        req = seen[0]
+        self.assertEqual(req.method, "PATCH")
+        self.assertEqual(req.url.params["pid"], "eq.5")
+        self.assertEqual(json.loads(req.content)["status"], "approved")
 
 
 @unittest.skipUnless(
@@ -180,6 +235,15 @@ class TestSupabaseLive(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(denied, f"RLS deveria negar mutação; veio {r.status_code}: {r.text[:200]}")
         again = await store.get(e.id)               # e a entrada continua intacta
         self.assertEqual(again.summary, "imutavel")
+
+    async def test_hitl_round_trip(self):
+        """Fila HITL na nuvem: propose → aparece em pending → set_status sai de pending."""
+        staging = SupabaseStagingStore(line=self.LINE)
+        pid = await staging.propose(kind="note", summary="proposta live", body="curadoria",
+                                    author="selftest", agent="x", provider="p", model="m")
+        self.assertIn(pid, [p["pid"] for p in await staging.pending()])
+        await staging.set_status(pid, "rejected")
+        self.assertNotIn(pid, [p["pid"] for p in await staging.pending()])
 
 
 if __name__ == "__main__":

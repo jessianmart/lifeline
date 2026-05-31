@@ -34,9 +34,11 @@ service_role). **Não** use `service_role` para escrita multi-tenant: bypassa a 
 
 1. **Criar projeto** — feito (a URL acima).
 2. **Rodar o schema** — Dashboard → **SQL Editor → New query** → cole
-   [`cloud/schema.sql`](../cloud/schema.sql) → **Run** (ou rode via Supabase MCP). Cria
-   `lifeline_entries` com índices, dedup, `seq` e **RLS append-only** (só SELECT/INSERT do
-   próprio usuário; UPDATE/DELETE negados pela ausência de policy).
+   [`cloud/schema.sql`](../cloud/schema.sql) → **Run** (ou rode via Supabase MCP). Cria:
+   - `lifeline_entries` — o ledger, com índices/dedup/`seq` e **RLS append-only** (só
+     SELECT/INSERT do próprio usuário; UPDATE/DELETE negados pela ausência de policy);
+   - `lifeline_proposals` — a **fila HITL** (mutável: SELECT/INSERT/UPDATE do dono; sem
+     DELETE → preserva o histórico de curadoria).
 3. **Auth** — habilite um provider em Authentication (e-mail/OAuth); obtenha o access token
    do usuário (ver decisão acima).
 4. **Wire do runtime:**
@@ -50,9 +52,13 @@ service_role). **Não** use `service_role` para escrita multi-tenant: bypassa a 
    lifeline --store supabase verify      # checa integridade da cadeia na nuvem
    lifeline --store supabase context     # monta o contexto a partir do Postgres
    lifeline --store supabase log --kind note --summary "..." --body "..."
+   # HITL na nuvem (a IA propõe, o humano cura):
+   lifeline --store supabase propose --kind decision --summary "..." --body "..."
+   lifeline --store supabase review
+   lifeline --store supabase approve <pid|all>
    ```
-   (`push/pull/clone/lines` e o HITL são do store local; no modo supabase use
-   `log/context/verify/rebuild/migrate`.)
+   (No modo supabase funciona `log/context/verify/rebuild/migrate` **e o HITL**
+   `propose/review/approve/reject`; só `push/pull/clone/lines` ficam no store local.)
 
    Via código:
    ```python
@@ -63,8 +69,9 @@ service_role). **Não** use `service_role` para escrita multi-tenant: bypassa a 
    ```bash
    SUPABASE_URL=... SUPABASE_KEY=... SUPABASE_TOKEN=... python -m pytest tests/test_supabase.py -v
    ```
-   Os 2 testes `TestSupabaseLive` saem do `skip` e provam: round-trip real e que a **RLS é
-   append-only** (UPDATE/DELETE negados). Usam a line `lifeline_selftest` (não poluem `ledger`).
+   Os 3 testes `TestSupabaseLive` saem do `skip` e provam: round-trip real do ledger, que a
+   **RLS é append-only** (UPDATE/DELETE negados) e o **round-trip HITL** (propose→pending→
+   status). Usam a line `lifeline_selftest` (não poluem `ledger`).
 6. **Chats web (depois):** servir o MCP remoto (SSE) + REST (PostgREST já existe) com OAuth.
    É o que pluga em claude.ai / ChatGPT / Gemini. Próximo passo do Tier 1.
 
@@ -74,8 +81,10 @@ O `EventStore` é um **port**. O `SupabaseEventStore` é só outro adapter — `
 `recall` e a CLI funcionam igual, trocando o local SQLite pelo Postgres. `httpx` é dep do
 core (já vinha via `mcp`); há o extra `lifeline-context[cloud]` como alias explícito.
 
-## O que ainda falta (depois do contrato validado)
+## Estado e o que falta
 
-- Auth do CLI ergonômica (login do usuário → JWT em cache), hoje é via env.
-- HITL (`propose`/`approve`) escrevendo na nuvem (hoje a staging é local SQLite).
-- Servidor MCP remoto (SSE) + deploy → superfície dos chats web.
+- ✅ Ledger na nuvem (`SupabaseEventStore`) + RLS append-only — validado ao vivo (#0042).
+- ✅ HITL na nuvem (`SupabaseStagingStore`, tabela `lifeline_proposals`) — propose/review/
+  approve/reject no modo `--store supabase`; wire mockado + round-trip live skip-gated.
+- ⏳ Auth do CLI ergonômica (login do usuário → JWT em cache); hoje é via env.
+- ⏳ Servidor MCP remoto (SSE) + deploy → superfície dos chats web (claude.ai/ChatGPT/Gemini).

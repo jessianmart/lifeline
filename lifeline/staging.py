@@ -5,18 +5,42 @@ Fluxo: a IA `propose` (async, leve, captura intent+porquê no momento da decisã
 aqui como pendente, SEM latência e SEM tocar na line → o humano revisa em lote e aprova/
 rejeita (HITL, fora do hot path) → aprovado sela na line (append-only, content-addressed).
 
-Vive na MESMA db da line, em tabela própria (`proposals`) — a line (`entries`) só recebe
-o que foi aprovado.
+`StagingStore` é o *port* (igual ao `EventStore`): `SQLiteStagingStore` é o adapter local;
+`SupabaseStagingStore` (em lifeline/cloud.py) é o da nuvem. A fila é MUTÁVEL (status muda) —
+ao contrário do ledger, que é append-only.
 """
 import json
 import sqlite3
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import aiosqlite
 
 
-class StagingStore:
+class StagingStore(ABC):
+    """Port da fila de propostas (HITL)."""
+
+    @abstractmethod
+    async def initialize(self) -> None: ...
+
+    @abstractmethod
+    async def propose(self, *, kind, summary, body, author, agent, provider, model, parents=None) -> int:
+        """Enfileira uma proposta pendente. Rápido e não-bloqueante (não toca na line). Retorna o pid."""
+
+    @abstractmethod
+    async def pending(self) -> List[Dict]: ...
+
+    @abstractmethod
+    async def get(self, pid: int) -> Optional[Dict]: ...
+
+    @abstractmethod
+    async def set_status(self, pid: int, status: str) -> None: ...
+
+
+class SQLiteStagingStore(StagingStore):
+    """Adapter local. Vive na MESMA db da line, em tabela própria (`proposals`)."""
+
     def __init__(self, db_path: str):
         self.path = db_path
 
@@ -41,7 +65,6 @@ class StagingStore:
             await db.commit()
 
     async def propose(self, *, kind, summary, body, author, agent, provider, model, parents=None) -> int:
-        """Enfileira uma proposta pendente. Rápido e não-bloqueante (não toca na line)."""
         async with self._conn() as db:
             cur = await db.execute(
                 "INSERT INTO proposals (ts, status, kind, author, agent, provider, model, summary, body, parents) "

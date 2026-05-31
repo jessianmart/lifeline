@@ -1,13 +1,11 @@
-"""Adapter Supabase (M3 Tier 1) — implementa o port `EventStore` sobre o PostgREST do
-Supabase. Promovido ao pacote: importável após install e coberto por testes.
+"""Adapters Supabase (M3 Tier 1) — `SupabaseEventStore` (ledger) e `SupabaseStagingStore`
+(fila HITL) sobre o PostgREST do Supabase. Implementam os ports `EventStore`/`StagingStore`,
+então o resto do Lifeline funciona igual, só trocando o backend.
 
-Disciplina (segue #0039): os testes de transporte MOCKADOS provam o *wire* (que requests
-saem certas e que parseamos as respostas). O CONTRATO real (schema/RLS/PostgREST) só é
-provado pelo teste live skip-gated em tests/test_supabase.py, que roda quando
-SUPABASE_URL/KEY estão no ambiente. Enquanto esse teste não passa contra um projeto,
-trate como "wired, não validado ao vivo".
+Disciplina (#0039): os testes de transporte MOCKADOS provam o *wire*; o CONTRATO real
+(schema/RLS/PostgREST) é provado pelo teste live skip-gated em tests/test_supabase.py.
 
-Auth (VALIDADO ao vivo, 2026-05-31): o gateway do Supabase exige DOIS valores distintos —
+Auth (VALIDADO ao vivo, #0042): o gateway do Supabase exige DOIS valores distintos —
 a CHAVE DO PROJETO no header `apikey` (anon/publishable) e o token no `Authorization:
 Bearer`. Usar o JWT de usuário como `apikey` dá 401 "Invalid API key". Logo:
   - SUPABASE_KEY   = apikey do projeto (anon p/ leitura; a RLS isola por tenant);
@@ -19,20 +17,23 @@ Pré-requisito: rodar cloud/schema.sql no projeto (SQL Editor ou via MCP).
 """
 import json
 import os
-from typing import Any, AsyncIterator, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import httpx
 
 from lifeline.entry import Entry
+from lifeline.staging import StagingStore
 from lifeline.store import EventStore
 
 TABLE = "lifeline_entries"
+PROPOSALS = "lifeline_proposals"
 
 
-class SupabaseEventStore(EventStore):
-    """EventStore remoto via PostgREST. `transport` é injetável para teste (httpx.MockTransport)."""
+class _SupabaseBase:
+    """Resolução de credenciais + cliente httpx + headers, compartilhados pelos adapters.
+    `transport` é injetável para teste (httpx.MockTransport)."""
 
-    def __init__(self, line: str = "ledger", url: Optional[str] = None,
+    def __init__(self, table: str, line: str = "ledger", url: Optional[str] = None,
                  key: Optional[str] = None, token: Optional[str] = None, transport: Any = None):
         explicit_key = key is not None      # construção explícita (ex.: testes) não herda env
         url = url or os.environ.get("SUPABASE_URL")
@@ -54,7 +55,7 @@ class SupabaseEventStore(EventStore):
         self.url = url.rstrip("/")
         self.key = key
         self.token = token
-        self.base = f"{self.url}/rest/v1/{TABLE}"
+        self.base = f"{self.url}/rest/v1/{table}"
         self._transport = transport  # None = real; httpx.MockTransport(...) nos testes
 
     def _client(self) -> httpx.AsyncClient:
@@ -67,6 +68,13 @@ class SupabaseEventStore(EventStore):
         if extra:
             h.update(extra)
         return h
+
+
+class SupabaseEventStore(_SupabaseBase, EventStore):
+    """Ledger remoto via PostgREST (append-only; a RLS nega UPDATE/DELETE)."""
+
+    def __init__(self, line: str = "ledger", url=None, key=None, token=None, transport: Any = None):
+        super().__init__(TABLE, line, url, key, token, transport)
 
     @staticmethod
     def _to_entry(payload) -> Entry:
@@ -119,3 +127,47 @@ class SupabaseEventStore(EventStore):
                 "line": f"eq.{self.line}", "parents": f'cs.["{entry_id}"]',
                 "select": "payload", "order": "seq.asc"})
         return [self._to_entry(row["payload"]) for row in r.json()]
+
+
+class SupabaseStagingStore(_SupabaseBase, StagingStore):
+    """Fila HITL remota via PostgREST. MUTÁVEL (status muda) — a RLS permite UPDATE, não DELETE."""
+
+    def __init__(self, line: str = "ledger", url=None, key=None, token=None, transport: Any = None):
+        super().__init__(PROPOSALS, line, url, key, token, transport)
+
+    @staticmethod
+    def _norm(row: Dict) -> Dict:
+        # `parents` vem como lista (jsonb); o consumidor (cmd_approve) espera string JSON,
+        # igual ao adapter SQLite. Normaliza para manter o fluxo agnóstico de backend.
+        row = dict(row)
+        row["parents"] = json.dumps(row.get("parents") or [])
+        return row
+
+    async def initialize(self) -> None:
+        pass  # tabela lifeline_proposals criada via cloud/schema.sql
+
+    async def propose(self, *, kind, summary, body, author, agent, provider, model, parents=None) -> int:
+        row = {"line": self.line, "kind": kind, "summary": summary, "body": body or "",
+               "author": author, "agent": agent, "provider": provider, "model": model,
+               "parents": parents or []}
+        async with self._client() as c:
+            r = await c.post(self.base, json=row, headers=self._headers({"Prefer": "return=representation"}))
+        return r.json()[0]["pid"]
+
+    async def pending(self) -> List[Dict]:
+        async with self._client() as c:
+            r = await c.get(self.base, headers=self._headers(), params={
+                "line": f"eq.{self.line}", "status": "eq.pending", "order": "pid.asc", "select": "*"})
+        return [self._norm(row) for row in r.json()]
+
+    async def get(self, pid: int) -> Optional[Dict]:
+        async with self._client() as c:
+            r = await c.get(self.base, headers=self._headers(), params={
+                "pid": f"eq.{pid}", "select": "*"})
+        rows = r.json()
+        return self._norm(rows[0]) if rows else None
+
+    async def set_status(self, pid: int, status: str) -> None:
+        async with self._client() as c:
+            await c.patch(self.base, params={"pid": f"eq.{pid}"},
+                          json={"status": status}, headers=self._headers())

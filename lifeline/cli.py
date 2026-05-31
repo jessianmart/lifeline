@@ -19,7 +19,7 @@ import sys
 from lifeline import sync
 from lifeline.entry import Entry, KINDS
 from lifeline.store import SQLiteEventStore
-from lifeline.staging import StagingStore
+from lifeline.staging import SQLiteStagingStore
 from lifeline.ingest import ingest_markdown, _parse_ts
 from lifeline.projection import render_ledger_markdown
 from lifeline.state import StateEngine
@@ -32,8 +32,9 @@ LINES_DIR = ".lifeline"
 # Store ativo, escolhido por main() via --store (default: SQLite local). Fica aqui para o
 # seam _open() trocar de adapter sem reescrever cada comando. Resetado a cada main().
 _STORE = {"kind": "sqlite", "line": "ledger"}
-# Comandos que só fazem sentido no store local (git, HITL/SQLite, glob de .db):
-_LOCAL_ONLY = {"push", "pull", "clone", "lines", "propose", "review", "approve", "reject"}
+# Comandos que só fazem sentido no store local (git e glob de .db). O HITL
+# (propose/review/approve/reject) já funciona na nuvem via SupabaseStagingStore.
+_LOCAL_ONLY = {"push", "pull", "clone", "lines"}
 
 PREAMBLE = """# LIFELINE — lifeline
 
@@ -97,6 +98,15 @@ async def _open(db):
     return s
 
 
+def _staging(db):
+    """Fila HITL no backend ativo (espelha _open). Nuvem usa SupabaseStagingStore."""
+    if _STORE["kind"] == "supabase":
+        from lifeline.cloud import SupabaseStagingStore
+        return SupabaseStagingStore(line=_STORE["line"])
+    os.makedirs(os.path.dirname(db) or ".", exist_ok=True)
+    return SQLiteStagingStore(db)
+
+
 async def _head_id(store):
     last = None
     async for e in store.stream():
@@ -137,21 +147,20 @@ async def cmd_log(db, out, kind, summary, body, author, agent, provider, model, 
 async def cmd_propose(db, kind, summary, body, author, agent, provider, model, parents):
     """Enfileira uma proposta (HITL). Async/leve: não toca na line, não regenera a view."""
     _validate(kind, body)
-    os.makedirs(os.path.dirname(db) or ".", exist_ok=True)
-    staging = StagingStore(db)
+    staging = _staging(db)
     await staging.initialize()
     return await staging.propose(kind=kind, summary=summary, body=body, author=author,
                                  agent=agent, provider=provider, model=model, parents=parents)
 
 
 async def cmd_review(db):
-    staging = StagingStore(db)
+    staging = _staging(db)
     await staging.initialize()
     return await staging.pending()
 
 
 async def cmd_approve(db, out, pids):
-    staging = StagingStore(db)
+    staging = _staging(db)
     await staging.initialize()
     store = await _open(db)
     targets = await staging.pending() if pids == ["all"] else [await staging.get(int(p)) for p in pids]
@@ -176,7 +185,7 @@ async def cmd_approve(db, out, pids):
 
 
 async def cmd_reject(db, pids):
-    staging = StagingStore(db)
+    staging = _staging(db)
     await staging.initialize()
     ids = [p["pid"] for p in await staging.pending()] if pids == ["all"] else [int(p) for p in pids]
     for pid in ids:

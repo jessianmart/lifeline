@@ -4,7 +4,7 @@ from lifeline.store import EventStore, SQLiteEventStore
 from lifeline.state import StateEngine, ledger_projection
 from lifeline.context import ContextAssembler
 from lifeline.recall import Embedder, LexicalEmbedder, SemanticRecall
-from lifeline.staging import StagingStore
+from lifeline.staging import StagingStore, SQLiteStagingStore
 
 __version__ = "0.0.1"
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "StateEngine", "ledger_projection",
     "ContextAssembler",
     "Embedder", "LexicalEmbedder", "SemanticRecall",
-    "StagingStore",
+    "StagingStore", "SQLiteStagingStore",
 ]

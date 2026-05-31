@@ -880,3 +880,17 @@ Caveat honesto: o JWT de usuario e curto (~1h) -> auth duravel do CLI (login/ref
 
 **Body**:
 A outra sessao validou o Tier 1 ao vivo e corrigiu o cloud.py (apikey do projeto no header apikey; JWT do usuario no Authorization: Bearer), mas o commit ead2f07 nao tocou testes nem docs — entao o fix so estava protegido pelo teste LIVE (skip-gated, nao roda no CI) e os docs ficaram errados. Fechei o gap: (1) 3 testes de wire mockados que travam a separacao — apikey=projeto / Bearer=token, fallback do token p/ apikey quando ausente, e leitura de SUPABASE_KEY+SUPABASE_TOKEN do ambiente; (2) o gate dos testes live agora exige tambem SUPABASE_TOKEN (sem ele a escrita 401 em vez de pular); (3) docs/M3_TIER1_SUPABASE.md reescrito p/ o modelo de DOIS valores (SUPABASE_KEY=apikey anon, SUPABASE_TOKEN=JWT de usuario). Suite 56/56 (+2 skip live).
+
+### #0044 — 2026-05-31T02:56:18.322228+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: HITL na nuvem: StagingStore vira port + SupabaseStagingStore (tabela lifeline_proposals); propose/review/approve/reject no modo --store supabase
+- **parents**: ea1e5d49f70152253d38d255d6a9d69c4aecd3105604f11b8c66a665e0d1a999
+- **id**: dc14e7e1004342f8f2edb338e814bcce55dab86ddeacc862560dbff038886121
+
+**Body**:
+Leva a curadoria anti-sujeira pro modo nuvem (a IA propoe, o humano cura), nao so o store local. (1) staging.py: StagingStore virou PORT (ABC) + SQLiteStagingStore (impl atual). (2) cloud.py: extrai _SupabaseBase (creds/headers/client compartilhados — comportamento da auth #0042 preservado, garantido pelos wire-tests) e adiciona SupabaseStagingStore. (3) cloud/schema.sql: tabela lifeline_proposals — MUTAVEL (status muda), RLS permite SELECT/INSERT/UPDATE do dono mas SEM DELETE (preserva historico de curadoria); contraste explicito com lifeline_entries que e append-only. (4) cli.py: factory _staging() espelha _open(); propose/review/approve/reject usam o backend ativo; _LOCAL_ONLY encolheu p/ {push,pull,clone,lines} (HITL saiu — agora funciona na nuvem). (5) testes: +4 wire mockados (propose->pid com return=representation, pending filtra por line+status e normaliza parents jsonb->string JSON p/ cmd_approve ficar agnostico, get vazio, set_status PATCH por pid) + 1 live HITL round-trip skip-gated. Suite 60 passa / 3 skip. Falta: auth ergonomica do CLI e o MCP remoto SSE (superficie dos chats web).
