@@ -14,17 +14,21 @@ Projeto: `https://rzphncyjrilhwpuemrcl.supabase.co` (ref `rzphncyjrilhwpuemrcl`)
 
 - **Nunca** cole a `service_role` key nem a senha do banco em chat ou em commit.
 - O passo do schema (abaixo) roda **no seu Dashboard** — não exige compartilhar key nenhuma.
-- O runtime lê as keys do **ambiente** (`SUPABASE_URL`, `SUPABASE_KEY`); use um `.env`
-  (já no `.gitignore`).
+- O runtime lê do **ambiente** (`SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_TOKEN`); use um
+  `.env` (já no `.gitignore`).
 
 ## Auth — decisão (importante)
 
-O schema usa `owner default auth.uid()` e a RLS exige `owner = auth.uid()`. Logo:
+O gateway do Supabase exige **DOIS valores distintos** (validado ao vivo, #0042 — usar o JWT
+como `apikey` dá `401 Invalid API key`):
 
-- **`SUPABASE_KEY` deve ser um access token de USUÁRIO logado (JWT)** — assim `auth.uid()`
-  resolve, o `owner` é preenchido e o INSERT passa na RLS.
-- **Não** use a `service_role` para escrita: ela bypassa a RLS e deixa `owner` nulo (quebra o
-  multi-tenant). anon key sem JWT → `auth.uid()` nulo → INSERT **negado** (esperado).
+- **`SUPABASE_KEY`** = a **apikey do PROJETO** (anon/publishable) — vai no header `apikey`.
+- **`SUPABASE_TOKEN`** = o **access token do USUÁRIO** (JWT) — vai no `Authorization: Bearer`.
+  Só com ele `auth.uid()` resolve, o `owner` é preenchido e o INSERT passa na RLS.
+
+Se `SUPABASE_TOKEN` faltar, o Bearer cai na própria apikey (serve p/ leitura anon ou
+service_role). **Não** use `service_role` para escrita multi-tenant: bypassa a RLS e deixa
+`owner` nulo. Nunca comite key nem token.
 
 ## Passos
 
@@ -38,7 +42,8 @@ O schema usa `owner default auth.uid()` e a RLS exige `owner = auth.uid()`. Logo
 4. **Wire do runtime:**
    ```bash
    export SUPABASE_URL=https://rzphncyjrilhwpuemrcl.supabase.co
-   export SUPABASE_KEY=<access token de usuário>   # NÃO comite — use .env
+   export SUPABASE_KEY=<apikey do projeto: anon/publishable>   # NÃO comite — use .env
+   export SUPABASE_TOKEN=<access token de usuário (JWT)>       # necessário p/ ESCRITA sob RLS
    ```
    Via CLI (mesmo seam, store remoto):
    ```bash
@@ -56,7 +61,7 @@ O schema usa `owner default auth.uid()` e a RLS exige `owner = auth.uid()`. Logo
    ```
 5. **Validar o contrato (a sessão com o MCP/creds roda):**
    ```bash
-   SUPABASE_URL=... SUPABASE_KEY=... python -m pytest tests/test_supabase.py -v
+   SUPABASE_URL=... SUPABASE_KEY=... SUPABASE_TOKEN=... python -m pytest tests/test_supabase.py -v
    ```
    Os 2 testes `TestSupabaseLive` saem do `skip` e provam: round-trip real e que a **RLS é
    append-only** (UPDATE/DELETE negados). Usam a line `lifeline_selftest` (não poluem `ledger`).

@@ -866,3 +866,17 @@ Provas AO VIVO pelo PostgREST contra o projeto real (ref rzphncyjrilhwpuemrcl):
 BUG achado por DOGFOODING (nao pelos mocks): o SupabaseEventStore mandava self.key tanto no header apikey quanto no Authorization. O gateway do Supabase REJEITA o JWT de usuario como apikey -> 401 "Invalid API key". Os mocks nao pegaram porque nao exercitam a validacao de apikey do gateway. Fix em lifeline/cloud.py: separar apikey (chave do projeto) do token (Bearer = JWT), lido de SUPABASE_TOKEN; e construcao com key explicita NAO herda token do ambiente (isolamento de teste). Mocks seguem verdes e os 2 testes live agora passam -> suite 55/55 (com creds; 8+2skip sem creds, CI-safe).
 
 Caveat honesto: o JWT de usuario e curto (~1h) -> auth duravel do CLI (login/refresh) e o proximo passo do Tier 1. O .mcp.json ganhou o servidor supabase oficial (npx), mas a Management API direta com o PAT ja bastou pra criar+validar; o MCP fica como opcao p/ sessoes futuras.
+
+### #0043 — 2026-05-31T02:46:33.361118+00:00 — fix
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: fix
+- **summary**: Trava o fix de auth do #0042 no CI (testes de wire p/ apikey vs Bearer) e corrige docs stale
+- **parents**: 45bfc3f95984780ca4093abc26cb34155e496113efd05bdda778194538bdaf57
+- **id**: ea1e5d49f70152253d38d255d6a9d69c4aecd3105604f11b8c66a665e0d1a999
+
+**Body**:
+A outra sessao validou o Tier 1 ao vivo e corrigiu o cloud.py (apikey do projeto no header apikey; JWT do usuario no Authorization: Bearer), mas o commit ead2f07 nao tocou testes nem docs — entao o fix so estava protegido pelo teste LIVE (skip-gated, nao roda no CI) e os docs ficaram errados. Fechei o gap: (1) 3 testes de wire mockados que travam a separacao — apikey=projeto / Bearer=token, fallback do token p/ apikey quando ausente, e leitura de SUPABASE_KEY+SUPABASE_TOKEN do ambiente; (2) o gate dos testes live agora exige tambem SUPABASE_TOKEN (sem ele a escrita 401 em vez de pular); (3) docs/M3_TIER1_SUPABASE.md reescrito p/ o modelo de DOIS valores (SUPABASE_KEY=apikey anon, SUPABASE_TOKEN=JWT de usuario). Suite 56/56 (+2 skip live).

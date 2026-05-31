@@ -47,6 +47,32 @@ class TestSupabaseWire(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["line"], "ledger")
         self.assertEqual(body["payload"]["summary"], "usar gRPC")  # Entry inteiro vai no payload
 
+    async def test_apikey_and_bearer_are_separate_values(self):
+        # fix do gateway (#0042): apikey = chave do PROJETO; Bearer = token do USUÁRIO (RLS).
+        seen = []
+
+        def handler(req):
+            seen.append(req)
+            return httpx.Response(201)
+
+        store = SupabaseEventStore(line="ledger", url="https://proj.supabase.co",
+                                   key="proj-anon", token="user-jwt",
+                                   transport=httpx.MockTransport(handler))
+        await store.append(Entry(kind="note", author="a", summary="s"))
+        self.assertEqual(seen[0].headers["apikey"], "proj-anon")              # chave do projeto
+        self.assertEqual(seen[0].headers["authorization"], "Bearer user-jwt")  # JWT do usuário
+
+    def test_token_falls_back_to_apikey_when_absent(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            s = SupabaseEventStore(url="https://p.supabase.co", key="only-key")
+        self.assertEqual(s.token, "only-key")  # sem token → Bearer usa o apikey (anon/service_role)
+
+    def test_token_read_from_env_when_key_not_explicit(self):
+        env = {"SUPABASE_URL": "https://p.supabase.co", "SUPABASE_KEY": "anon", "SUPABASE_TOKEN": "jwt"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            s = SupabaseEventStore(line="ledger")
+        self.assertEqual((s.key, s.token), ("anon", "jwt"))  # dois valores separados via env
+
     async def test_append_idempotent_status_codes(self):
         e = Entry(kind="note", author="a", summary="dup")
         for code in (200, 201, 204):  # duplicado ignorado (200/204) também é sucesso
@@ -119,8 +145,8 @@ class TestCLIStoreGuard(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY"),
-    "teste live: defina SUPABASE_URL e SUPABASE_KEY (access token de usuário) p/ provar o contrato real",
+    os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY") and os.environ.get("SUPABASE_TOKEN"),
+    "teste live: defina SUPABASE_URL, SUPABASE_KEY (apikey do projeto) e SUPABASE_TOKEN (JWT de usuário)",
 )
 class TestSupabaseLive(unittest.IsolatedAsyncioTestCase):
     """Roda na sessão com o projeto real. Usa a line 'lifeline_selftest' p/ não poluir 'ledger'."""
