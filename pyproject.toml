@@ -21,6 +21,7 @@ cloud = ["httpx>=0.27"]  # alias explícito p/ quem só quer o store Supabase
 [project.scripts]
 lifeline = "lifeline.cli:main"
 lifeline-mcp = "lifeline.mcp_server:main"
+lifeline-mcp-remote = "lifeline.mcp_server:main_remote"
 
 # Pacote chato (flat). `find` com include evita repetir o bug do SDK antigo
 # (packages=["lifeline"] que excluía subpacotes), caso subpacotes surjam.
