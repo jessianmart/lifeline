@@ -1,56 +1,47 @@
-# AGENTS.md — onboarding para qualquer IA
+# AGENTS.md — onboarding for any AI
 
-Você (qualquer modelo, qualquer ferramenta) está trabalhando num projeto com Lifeline. Antes
-de agir, **carregue o contexto** — ele responde o quê/por quê/decidido/próximo sem ninguém
-reexplicar.
+You (any model, any tool) are working on a project that uses Lifeline. Before acting,
+**load the context** — it answers what/why/decided/next with no one re-explaining.
 
-## Ainda não está conectado? (instale — 1 min, FAÇA pelo humano)
-Se o resource/CLI abaixo não existir, instale e conecte — e **explique cada passo ao humano**:
-1. `pip install -e .` (na raiz do repo) → habilita `lifeline` e `lifeline-mcp`.
-2. Conecte no cliente dele (snippets prontos em `docs/INTEGRATION.md`):
-   - **Claude Code:** já lê o `.mcp.json` do projeto (automático) — ou `claude mcp add lifeline -- lifeline-mcp`.
-   - **Cursor / Claude Desktop / Gemini CLI:** adicione o server stdio `lifeline-mcp` na config MCP do cliente.
-3. Clone novo sem `.lifeline/`? `lifeline migrate --from LIFELINE.md` reconstrói o store.
+## Not connected yet? (install — 1 min, DO IT for the human)
+If the resource/CLI below doesn't exist, install and connect — and **explain each step to the human**:
+1. `pip install lifeline-context` (or `pip install -e .` from the repo root) → enables `lifeline` and `lifeline-mcp`.
+2. Connect it in their client (ready-made snippets in `docs/INTEGRATION.md`):
+   - **Claude Code:** already reads the project's `.mcp.json` (automatic) — or `claude mcp add lifeline -- lifeline-mcp`.
+   - **Cursor / Claude Desktop / Gemini CLI:** add the stdio server `lifeline-mcp` to that client's MCP config.
+3. Fresh clone without `.lifeline/`? `lifeline migrate --from LIFELINE.md` rebuilds the store.
 
-## Conecte (leia a line)
+## Connect (read the line)
+Use whichever is available first:
+1. **MCP** — resource `lifeline://project/context` (server `lifeline-mcp`).
+2. **CLI** — `lifeline context` (or `lifeline context --query "<your task>"` to prioritize the relevant).
+3. **File** — read `LIFELINE.md`, starting at entry **#0001** (the whole project in human language). Don't hand-edit it — it's generated.
 
-Use o primeiro que estiver disponível:
-
-1. **MCP** — resource `lifeline://project/context` (servidor `lifeline-mcp`).
-2. **CLI** — `lifeline context` (ou `lifeline context --query "<sua tarefa>"` para priorizar o relevante).
-3. **Arquivo** — leia `LIFELINE.md`, começando pela entrada **#0001** (é o projeto inteiro
-   em linguagem humana). Não a edite à mão — ela é gerada.
-
-## Trabalhe (escreva na line)
-
-A cada **unidade de trabalho com significado** (uma decisão, feature, fix, incidente — não por
-arquivo, não por tool call), **anexe**:
-
+## Work (write to the line)
+On each **meaningful unit of work** (a decision, feature, fix, incident — not per file, not per tool call), **append**:
 - **MCP** — tool `lifeline_append(kind, summary, body, …)`.
-- **CLI** — `lifeline log --kind … --summary "…" --body "… o PORQUÊ …"`.
+- **CLI** — `lifeline log --kind … --summary "…" --body "… the WHY …"`.
 
-Reverteu uma decisão / fechou uma thread? **`lifeline_recontextualize(parent_id, …)`** (ou
-`lifeline log --kind correction --parents <id>`) — supersede por id; nunca edite o passado.
+Reversed a decision / closed a thread? **`lifeline_recontextualize(parent_id, …)`** (or
+`lifeline log --kind correction --parents <id>`) — supersede by id; never edit the past.
 
-## Explique e organize pro humano (você é a interface)
-- **Explique** o que o Lifeline é quando ele não souber: o *porquê* versionado do projeto, que
-  você herda ao conectar — sem ele reexplicar.
-- **Organize:** ao conectar, resuma o quê/por quê/decidido/próximo; aponte decisões em vigor,
-  sinalize threads fechadas/revertidas e o que está em aberto.
-- **Capture:** proponha entradas pelo trabalho com significado (HITL — ele aprova/rejeita).
-  Ele "só não deve aceitar sujeira".
-- **Reduza fricção:** se o setup falhar, diagnostique e resolva — não devolva erro cru.
+## Explain and organize for the human (you are the interface)
+- **Explain** what Lifeline is when they don't know: the versioned *why* of the project, which
+  you inherit on connect — without them re-explaining.
+- **Organize:** on connect, summarize what/why/decided/next; point out decisions in force,
+  flag closed/reverted threads and what's open.
+- **Capture:** propose entries for meaningful work (HITL — they approve/reject). They "just
+  shouldn't accept junk."
+- **Reduce friction:** if setup fails, diagnose and fix it — don't hand back a raw error.
 
-## Obedeça as leis
+## Obey the laws
+1. No memory without an immutable anchor.  2. Append-only.  3. Deterministic content-addressing.
+4. Provider-agnostic storage; deliver in the provider's format.  5. **The why outweighs the what.**
+6. Budget is first-class.  7. MCP-native.
 
-1. Nenhuma memória sem âncora imutável.  2. Append-only.  3. Content-addressing determinístico.
-4. Storage agnóstico de provider; entrega por provider.  5. **O porquê pesa mais que o quê.**
-6. Budget é first-class.  7. MCP-native.
+**Non-goals:** Lifeline records reasoning, not execution. It's not a cognitive OS, MMU, agent
+orchestrator, workflow engine, or a git replacement. If an idea arrives dressed as
+"hypervisor/microkernel/fractal", strip the costume before evaluating it.
 
-**Non-goals:** Lifeline registra raciocínio, não execução. Não é OS cognitivo, MMU,
-orquestrador de agentes, workflow engine, nem substituto de git. Se uma ideia vier vestida de
-"hypervisor/microkernel/fractal", tire o figurino antes de avaliar.
-
-## Antes de declarar feito
-
-`lifeline verify` deve dar `OK`. Código novo só entra com teste que prova o comportamento.
+## Before declaring done
+`lifeline verify` must print `OK`. New code only lands with a test that proves the behavior.

@@ -1,62 +1,81 @@
 # Lifeline
 
-> **Runtime de contexto para desenvolvimento com IA.** O projeto guarda *por que* ele
-> é o que é — e qualquer IA conecta e **já sabe**, sem humano reexplicando.
+> **A context runtime for AI-assisted development.** The project stores *why* it is what it
+> is — and any AI connects and **already knows**, with no human re-explaining.
 
-![status](https://img.shields.io/badge/status-alpha-orange) ![python](https://img.shields.io/badge/python-3.10%2B-blue) ![tests](https://img.shields.io/badge/tests-68%20passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+🌐 **English** · [Português](README.pt-BR.md)
 
-É, em uma frase, **o "git do raciocínio"**: assim como o git versiona *o quê* mudou no
-código, o Lifeline versiona *por quê* — decisões, reversões, incidentes, o estado atual —
-num ledger append-only, content-addressed, que vive dentro do projeto. Qualquer modelo
-(Claude, GPT, Gemini), em qualquer sessão, reconstrói o contexto ao conectar via MCP.
+![status](https://img.shields.io/badge/status-alpha-orange) ![python](https://img.shields.io/badge/python-3.10%2B-blue) ![tests](https://img.shields.io/badge/tests-75%20passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
----
-
-## O problema
-
-Assistentes de IA são **stateless entre sessões**. A cada nova sessão, agente ou provider,
-o humano vira o barramento de memória — reexplicando decisões que já existiam. A correção
-ingênua (um log markdown vivo) funciona até estourar a janela de contexto. Ferramentas de
-"memória" guardam texto/vetores sem proveniência → recall alucinado.
-
-## A ideia
-
-O **norte** é uma métrica única — **Tempo-até-Contexto (TTC) → 0** — operacionalizada por um
-teste de aceitação:
-
-> Uma IA nova conecta, **sem humano no meio**, e responde corretamente:
-> **o quê / por quê / o que está decidido / o que vem a seguir?**
-
-O Lifeline guarda a "linha de vida" do projeto (a `LIFELINE.md`) e a torna
-**consultável, comprimível e ancorada**, para nunca estourar a janela e nunca alucinar.
+In one line, it's **"git for reasoning"**: just as git versions *what* changed in the code,
+Lifeline versions *why* — decisions, reversals, incidents, the current state — in an
+append-only, content-addressed ledger that lives inside the project. Any model (Claude, GPT,
+Gemini), in any session, reconstructs the context the moment it connects via MCP.
 
 ---
 
-## Instalação
+## The problem
+
+AI assistants are **stateless across sessions**. With every new session, agent, or provider,
+the human becomes the memory bus — re-explaining decisions that already existed. The naive
+fix (a living markdown log) works until it blows past the context window. "Memory" tools
+store text/vectors with no provenance → hallucinated recall.
+
+## The idea
+
+The **north star** is a single metric — **Time-to-Context (TTC) → 0** — operationalized by an
+acceptance test:
+
+> A fresh AI connects, **with no human in the loop**, and correctly answers:
+> **what / why / what's decided / what's next?**
+
+Lifeline keeps the project's "lifeline" (the `LIFELINE.md`) and makes it **queryable,
+compressible, and anchored** — so it never overflows the window and never hallucinates.
+
+---
+
+## Install
 
 ```bash
-pip install -e .            # na raiz do repo → instala `lifeline`, `lifeline-mcp`, `lifeline-mcp-remote`
-pip install -e ".[cloud]"   # opcional: modo nuvem (Supabase) — puxa httpx explicitamente
+pip install lifeline-context        # once published to PyPI
+pip install -e .                    # or, from the repo root (dev) → installs lifeline, lifeline-mcp, lifeline-mcp-remote
+pip install -e ".[cloud]"           # optional: cloud mode (Supabase) — pulls httpx explicitly
 ```
 
-Dependências: `pydantic`, `aiosqlite`, `mcp`, `httpx`. Python ≥ 3.10.
+Dependencies: `pydantic`, `aiosqlite`, `mcp`, `httpx`. Python ≥ 3.10.
 
 ## Quickstart (CLI)
 
 ```bash
-# Em QUALQUER projeto seu — cada projeto ganha seu próprio .lifeline/ledger.db:
-lifeline log --kind bootstrap --summary "Funda o projeto X" --body "API de cobrança multi-tenant."
-lifeline log --kind decision  --summary "Banco: PostgreSQL"  --body "ACID exigido por auditoria."
+# In ANY of your projects — each gets its own .lifeline/ledger.db:
+lifeline log --kind bootstrap --summary "Bootstrap project X" --body "Multi-tenant billing API."
+lifeline log --kind decision  --summary "DB: PostgreSQL"      --body "ACID required by audit."
 
-lifeline context                       # imprime a verdade atual montada (o que uma IA lê)
-lifeline context --query "banco"       # prioriza o que é relevante à tarefa (Camada 3)
-lifeline verify                        # confere a integridade da cadeia
+lifeline context                       # prints the assembled current truth (what an AI reads)
+lifeline context --query "database"    # prioritizes what's relevant to the task (Layer 3)
+lifeline verify                        # checks the chain's integrity
 ```
 
-A `LIFELINE.md` se regenera a cada `log` — **não edite à mão**. Num clone novo sem
-`.lifeline/`, reconstrua o cache com `lifeline migrate --from LIFELINE.md`.
+`LIFELINE.md` regenerates on every `log` — **don't hand-edit it**. On a fresh clone without
+`.lifeline/`, rebuild the cache with `lifeline migrate --from LIFELINE.md`.
 
-## Quickstart (SDK Python)
+## Connect it to your AI (zero config in Claude Code)
+
+Lifeline ships a local **MCP server** (`lifeline-mcp`, stdio). On connect, the AI gets the
+`lifeline://project/context` resource + tools (`lifeline_recall`, and write tools that are
+**HITL** — they *propose*; the human approves). Server config is in [`.mcp.json`](.mcp.json):
+
+```json
+{ "mcpServers": { "lifeline": {
+    "command": "lifeline-mcp", "args": [],
+    "env": { "LIFELINE_DB": ".lifeline/ledger.db" } } } }
+```
+
+- **Claude Code** reads `.mcp.json` **automatically**.
+- **Cursor / Claude Desktop / Gemini CLI:** copy-paste snippets in [`docs/INTEGRATION.md`](docs/INTEGRATION.md).
+- **Web chat apps** (claude.ai, ChatGPT) need a remote server + OAuth — see [`docs/MCP_REMOTE.md`](docs/MCP_REMOTE.md).
+
+## Quickstart (Python SDK)
 
 ```python
 import asyncio
@@ -65,189 +84,125 @@ from lifeline import Entry, SQLiteEventStore, StateEngine, ContextAssembler, Sem
 async def main():
     store = SQLiteEventStore(".lifeline/ledger.db")
     await store.initialize()
-
     await store.append(Entry(kind="decision", author="me",
-                             summary="Banco: PostgreSQL", body="ACID por auditoria."))
-
-    # verdade atual montada, pronta pra injetar num prompt:
-    ctx = await ContextAssembler(StateEngine(store)).assemble()
+                             summary="DB: PostgreSQL", body="ACID for audit."))
+    ctx = await ContextAssembler(StateEngine(store)).assemble()   # ready to inject into a prompt
     print(ctx)
-
-    # recall por relevância (ancorado ao evento de origem):
-    hits = await SemanticRecall(store).search("qual banco de dados", k=3)
+    hits = await SemanticRecall(store).search("which database", k=3)  # anchored relevance
 
 asyncio.run(main())
 ```
 
 ---
 
-## O loop (faça os dois lados)
+## The loop (do both sides)
+
+- **On connect:** load the context (`lifeline context` or the MCP resource) before acting.
+- **While working:** on each decision/feature/fix/incident, **append** (`lifeline log` or
+  `lifeline_append`). Reversed something? `lifeline_recontextualize` (supersede by id).
 
 ```
-            ┌─────────────────────────── a IA dirige os dois lados ──────────────────────────┐
-            │                                                                                 │
-   CONECTAR ▼ (lê)                                                                ESCREVER ▲ (anexa)
-   lifeline context             ┌──────────────┐   reduce   ┌─────────────┐  rank+   │  lifeline log
-   resource MCP  ───────────────▶  Camada 1     │──────────▶│  Camada 2   │  budget  │  tool MCP
-   lifeline://project/context   │  Ledger (DAG  │           │  Estado     │──────────┤  lifeline_append
-                                │  imutável,    │           │  (verdade   │          │  lifeline_recontextualize
-        Camada 3 (recall) ──────▶  hasheado)    │           │   atual)    │          │
-        relevância ancorada     └──────┬───────┘            └─────┬───────┘          │
-                                       │  projection (store → markdown)  ▼            │
-                                       └───────────────────▶  LIFELINE.md (view gerada, diffável no git)
+   CONNECT (read)                                                      WRITE (append)
+   lifeline context        ┌─────────────┐  reduce  ┌──────────┐  rank+  lifeline log
+   MCP resource ──────────▶│  Layer 1    │─────────▶│ Layer 2  │ budget  lifeline_append
+   lifeline://…/context    │  Ledger     │          │ State    │────────▶ (HITL: propose)
+   Layer 3 (recall) ──────▶│  (immutable │          │ (current │
+   anchored relevance      │   DAG)      │          │  truth)  │
+                           └──────┬──────┘          └────┬─────┘
+                                  │ projection (store → markdown) ▼
+                                  └──────────────▶ LIFELINE.md (generated view, git-diffable)
 ```
 
-- **Ao conectar:** carregue o contexto (`lifeline context` ou o resource MCP) antes de agir.
-- **Ao trabalhar:** a cada decisão/feature/fix/incidente, **anexe** (`lifeline log` ou
-  `lifeline_append`). Reverteu algo? `lifeline_recontextualize` (supersede por id).
+## Core concepts
 
----
+- **Entry** — the atomic unit. Content-addressed: `id = sha256(kind, author, agent, provider,
+  model, summary, body, sorted-parents)`. `ts` and `dedup_key` are **outside** the hash → the
+  same content yields the same `id` on any machine (the basis for dedup and sync).
+- **3 memory layers** (all anchored to the immutable ledger): **Ledger** (hashed append-only
+  DAG, source of truth) · **State** (current truth reduced via reducers; status is a
+  projection, not a state machine) · **Recall** (relevance search; every hit anchored to its
+  source event).
+- **Supersession** — a `correction` referencing another entry's `id` removes it from the
+  current truth (reverted decision, closed thread). Append-only: the past is never edited.
+- **Anti-hallucination anchor** — every item the AI reads carries its source event's hash.
+  No anchor, no entry.
 
-## Conceitos centrais
+Full detail in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-- **Entry** — a unidade atômica. Content-addressed: `id = sha256(kind, author, agent,
-  provider, model, summary, body, pais-ordenados)`. `ts` e `dedup_key` ficam **fora** do
-  hash → o mesmo conteúdo gera o mesmo `id` em qualquer máquina (base do dedup e do sync).
-- **As 3 camadas de memória** (todas ancoradas no ledger imutável):
-  1. **Ledger (episódico)** — DAG hasheado append-only. A fonte de verdade.
-  2. **Estado (operacional)** — a verdade *atual*, reduzida do ledger via reducers. Status é
-     projeção, não máquina de estados.
-  3. **Recall (semântico)** — busca por relevância; cada resultado ancorado ao evento de origem.
-- **Supersessão** — uma `correction` que referencia o `id` de outra entrada a remove da
-  verdade atual (decisão revertida, thread fechada). Append-only: o passado nunca é editado.
-- **Âncora anti-alucinação** — todo item que a IA lê carrega o hash do evento de origem.
-  Sem âncora, não entra.
+## CLI reference
 
-Detalhe completo em **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
-
----
-
-## Referência — CLI
-
-| Comando | O que faz |
+| Command | What it does |
 |---|---|
-| `lifeline log --kind … --summary … [--body … --parents id,…]` | **humano:** anexa direto na line (você é o aprovador) e regenera a view |
-| `lifeline propose --kind … --summary … --body …` | propõe uma entrada (**HITL**) — fica pendente, não entra na line |
-| `lifeline review` | lista as propostas pendentes (curadoria) |
-| `lifeline approve <pid\|all>` · `lifeline reject <pid\|all>` | HITL: sela na line / descarta |
-| `lifeline context [--query "…"] [--budget N]` | imprime a verdade atual montada (com relevância se `--query`) |
-| `lifeline verify` | confere que todo `id` bate com seu conteúdo |
-| `lifeline rebuild` | regenera a view a partir do store |
-| `lifeline migrate --from LIFELINE.md` | reconstrói o `.lifeline/ledger.db` a partir do markdown |
-| `lifeline lines` | lista as lines do projeto (`.lifeline/*.db`) |
-| `lifeline push` · `lifeline pull` · `lifeline clone <url> <dir>` | **sync via git** (Tier 0, custo zero): a view textual sincroniza; o `.db` se reconstrói |
+| `lifeline log --kind … --summary … [--body … --parents id,…]` | **human:** append directly to the line (you're the approver) + regenerate the view |
+| `lifeline propose --kind … --summary … --body …` | propose an entry (**HITL**) — stays pending, not in the line |
+| `lifeline review` · `approve <pid\|all>` · `reject <pid\|all>` | HITL curation: list / seal / discard |
+| `lifeline context [--query "…"] [--budget N]` | print the assembled current truth (relevance if `--query`) |
+| `lifeline verify` | check that every `id` matches its content |
+| `lifeline rebuild` · `migrate --from LIFELINE.md` | regenerate the view / rebuild the `.db` from markdown |
+| `lifeline lines` | list the project's lines (`.lifeline/*.db`) |
+| `lifeline push` · `pull` · `clone <url> <dir>` | **git sync** (Tier 0, zero cost): the text view syncs; the `.db` rebuilds |
 
-**Escrita (tiering, como aprovar um comando shell):** o humano no `log` comita direto (é o
-aprovador); a **IA via MCP `propose`** — entra como proposta **pendente** (HITL), e um humano
-**aprova** (`review`/`approve`) antes de virar verdade. Anti-sujeira no write-time (exige o
-*porquê*); junk nunca entra na line.
+**Write tiering (like approving a shell command):** the human's `log` commits directly (they're
+the approver); the **AI via MCP `propose`** enters as a **pending** proposal (HITL), and a human
+**approves** before it becomes truth. Write-time anti-junk requires the *why*; junk never enters.
 
-Globais: `--db` (default `.lifeline/ledger.db`) · **`--line <nome>`** — seleciona uma *line*
-nomeada, mapeando ledger **e** view juntos: `.lifeline/<nome>.db` + `LIFELINE.<nome>.md`
-(sem colisão entre lines). Sem `--line`, usa a line default. Uma **line** = um ledger de
-raciocínio (código *ou* conversa); um projeto tem 1 por default e suporta N.
+Globals: `--db` (default `.lifeline/ledger.db`) · **`--line <name>`** maps a named *line* —
+ledger **and** view together (`.lifeline/<name>.db` + `LIFELINE.<name>.md`), no collisions.
+A **line** = one reasoning ledger (code *or* conversation); a project has 1 by default, supports N.
 
-## Referência — MCP
+## Local → cloud (graduation)
 
-Servidor: `lifeline-mcp` (stdio). Config em [`.mcp.json`](.mcp.json):
-
-```json
-{ "mcpServers": { "lifeline": {
-    "command": "lifeline-mcp", "args": [],
-    "env": { "LIFELINE_DB": ".lifeline/ledger.db" } } } }
-```
-
-- **Resource** `lifeline://project/context` — a linha de vida montada (leia ao conectar).
-- **Tools** `lifeline_append`, `lifeline_recontextualize`, `lifeline_recall`.
-
-Integração e hook de auto-connect: **[`docs/INTEGRATION.md`](docs/INTEGRATION.md)**.
-
-## Referência — SDK (principais símbolos)
-
-`Entry` · `SQLiteEventStore` / `EventStore` · `StateEngine` · `ContextAssembler` ·
-`SemanticRecall` / `LexicalEmbedder` / `Embedder` · `ingest_markdown` · `render_ledger_markdown`.
-
----
-
-## Para IAs / AI agents
-
-Esta é a parte que importa: **qualquer IA entende este projeto sem ninguém explicar.**
-
-- **Leia a line:** [`LIFELINE.md`](LIFELINE.md) — comece pela **#0001**. Ou rode
-  `lifeline context`. Ou, via MCP, leia o resource `lifeline://project/context`.
-- **Obedeça as leis** (abaixo) e **anexe** o que você decidir (`lifeline_append`).
-- Onboarding tool-agnóstico em **[`AGENTS.md`](AGENTS.md)** (e [`CLAUDE.md`](CLAUDE.md) para
-  Claude Code).
-
-## As 7 leis (a constituição)
-
-1. **Nenhuma memória sem âncora imutável** (anti-alucinação).
-2. **Append-only** (correções são entradas novas).
-3. **Content-addressing determinístico.**
-4. **Storage agnóstico de provider; entrega no formato do provider.**
-5. **O *porquê* pesa mais que o *quê*.**
-6. **Budget é first-class** (truncamento sempre explícito).
-7. **MCP-native.**
-
-## Non-goals (o que o Lifeline **não** é)
-
-NÃO é sistema operacional cognitivo, MMU, orquestrador/sandbox de agentes, workflow
-engine, substituto do git, executor/curador (self-healing) nem treinador (fine-tuning).
-**Registra raciocínio, não execução.** Ver o *porquê* em `LIFELINE.md` #0002 e #0019.
-
----
-
-## Do local pra nuvem (graduação)
-
-Tudo é content-addressed (`id = sha256(conteúdo + pais)`) — então **subir uma line local
-pra nuvem é lossless e idempotente**: os ids são os mesmos e o re-seed deduplica sozinho.
+Everything is content-addressed → **pushing a local line to the cloud is lossless and
+idempotent**: same ids, re-seed dedupes itself.
 
 ```bash
-lifeline --store supabase migrate --from LIFELINE.md   # seed (pode repetir — não duplica)
-lifeline --store supabase context                       # passa a operar na nuvem
-lifeline --store supabase log --kind decision --summary "…" --body "…"
+lifeline --store supabase migrate --from LIFELINE.md   # seed (repeatable — no dupes)
+lifeline --store supabase context                       # now operate against the cloud
 ```
 
-Só compartilhar o *texto* (sem nuvem)? `lifeline push` (Tier 0 — git).
-Setup + auth da nuvem: [`docs/M3_TIER1_SUPABASE.md`](docs/M3_TIER1_SUPABASE.md) · `.env.example`.
+Just share the *text* (no cloud)? `lifeline push` (Tier 0 — git). Cloud setup + auth:
+[`docs/M3_TIER1_SUPABASE.md`](docs/M3_TIER1_SUPABASE.md) · `.env.example`.
 
----
+## The 7 laws (the constitution)
+
+1. **No memory without an immutable anchor** (anti-hallucination). 2. **Append-only** (corrections
+are new entries). 3. **Deterministic content-addressing.** 4. **Provider-agnostic storage; deliver
+in the provider's format.** 5. **The *why* outweighs the *what*.** 6. **Budget is first-class**
+(truncation always explicit). 7. **MCP-native.**
+
+**Non-goals:** Lifeline is NOT a cognitive OS, MMU, agent orchestrator/sandbox, workflow engine,
+a git replacement, an executor/curator (self-healing), or a trainer (fine-tuning). **It records
+reasoning, not execution.**
 
 ## Status & roadmap
 
-**Alpha.** Núcleo **local single-user** sólido e provado — corretude travada por testes
-(determinismo, anti-tamper, supersessão, round-trip ponto-fixo). **Nuvem (M3) funcional e
-validada ao vivo.** 70 testes verdes; CI no GitHub Actions; pip-installable.
+**Alpha.** Solid, proven **local single-user** core — correctness locked by tests (determinism,
+anti-tamper, supersession, round-trip fixed-point). **Cloud (M3) functional and live-validated.**
+75 tests green; CI on GitHub Actions.
 
-| Fase | Estado |
+| Milestone | State |
 |---|---|
-| **M1 / M1.5** — laço (ledger→estado→montagem→MCP), autoria, recall, CLI, store-é-fonte | ✅ feito |
-| **M3 Tier 0** — sync via git | ✅ feito |
-| **M3 Tier 1** — store Supabase + RLS append-only + HITL na nuvem | ✅ validado ao vivo |
-| **M3** — MCP remoto (HTTP/SSE) + OAuth **Resource Server** (multi-tenant) | ✅ feito |
-| **M2** — embedder semântico denso (o default é lexical) | aberto (#0029) |
-| **OAuth Authorization Server** (DCR/auth-code p/ conectores hospedados) | aberto (#0049) |
-| **M4** — multi-usuário (merge de DAG concorrente) / hub | planejado |
+| **M1 / M1.5** — the loop (ledger→state→assembly→MCP), authorship, recall, CLI, store-is-source | ✅ done |
+| **M3 Tier 0** — git sync | ✅ done |
+| **M3 Tier 1** — Supabase store + append-only RLS + cloud HITL | ✅ live-validated |
+| **M3** — remote MCP (HTTP/SSE) + OAuth **Resource Server** (multi-tenant) | ✅ done |
+| **M2** — dense semantic embedder (default is lexical) | open (#0029) |
+| **OAuth Authorization Server** (DCR/auth-code for hosted connectors) | open (#0049) |
+| **M4** — multi-user (concurrent DAG merge) / hub | planned |
 
-**Limites honestos hoje:** recall lexical (palavra, não significado — #0029); um cloud PAGO
-hospedado exige o AS + billing (#0049) — hoje é **OSS local + *bring-your-own-Supabase***;
-sem retry/backoff no adapter de nuvem (só log+raise); docs em PT (EN pendente).
+**Honest limits today:** recall is lexical (keywords, not meaning — #0029); a hosted **paid**
+cloud needs the AS + billing (#0049) — today it's **local OSS + bring-your-own-Supabase**; no
+retry/backoff in the cloud adapter yet (log+raise only).
 
----
+## Built by dogfooding
 
-## Como foi construído (dogfooding)
+Lifeline was rebuilt **using itself from entry #0001**: every decision became an anchored entry
+in `LIFELINE.md`. The process surfaced **real bugs in actual use** that unit tests missed
+(taxonomy, encoding, false relevance) — all recorded. The proof it works is that the repo needs
+no one to explain it.
 
-O Lifeline foi reconstruído **usando a si mesmo desde a entrada #0001**: cada decisão desta
-sessão virou uma entrada ancorada na `LIFELINE.md`. O processo encontrou **bugs reais no
-próprio uso** que os testes unitários não pegaram (taxonomia, encoding, falsa relevância) —
-todos registrados. A prova de que funciona é o próprio repo não precisar de ninguém para
-ser entendido.
+## Contributing & license
 
-## Contribuindo
-
-A regra é a constituição: **se você mexeu, anexe na line.** Ver
-**[`CONTRIBUTING.md`](CONTRIBUTING.md)**.
-
-## Licença
-
-[MIT](LICENSE). (Default permissivo para o core open-source; o modo nuvem é open-core.)
+The rule is the constitution: **if you touched it, append to the line.** See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) · [`AGENTS.md`](AGENTS.md) · [`llms.txt`](llms.txt).
+Licensed [MIT](LICENSE) — open-source core; cloud mode is open-core.

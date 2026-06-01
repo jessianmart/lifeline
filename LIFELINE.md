@@ -1132,3 +1132,17 @@ Prep do item 1 (publicar no PyPI) executada ate onde da sem a conta do dono. Nom
 
 **Body**:
 Dono optou pelo Trusted Publisher (OIDC) em vez de API token — mais seguro, nada de segredo pra gerenciar. Criado .github/workflows/publish.yml: dispara em release published (ou workflow_dispatch manual); permissions id-token: write (OIDC); environment pypi (casa com o formulario do PyPI); builda sdist+wheel e publica via pypa/gh-action-pypi-publish@release/v1. Formulario PyPI Trusted Publisher: projeto=lifeline-context, owner=jessianmart, repo=lifeline, workflow=publish.yml, environment=pypi. Falta do dono: (1) submeter o formulario (pending publisher cria o projeto no 1o publish), (2) criar o environment 'pypi' em Settings->Environments do repo, (3) criar um GitHub Release v0.1.0 (ou rodar o workflow manual) -> publica sozinho via OIDC. Ancorado #0061.
+
+### #0062 — 2026-06-01T15:59:04.361457+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: EN docs (superficie de lancamento): README EN + README.pt-BR.md preservado, llms.txt e AGENTS.md traduzidos
+- **parents**: 36ab5767f43e28534b523281cfb18966ec5f1b147f6eede481560ae19721ea91
+- **id**: 19ef6e8c841f2e63a80bb2fc34c2ef6c35a1e8f2832a432c6dd3861e5e30bf32
+
+**Body**:
+Alcance global pro lancamento OSS. README.md agora em EN (front door + long_description do PyPI), com seletor de idioma; o PT preservado em README.pt-BR.md. llms.txt e AGENTS.md (AI-facing) traduzidos pra EN — alinha com o 'AI-first' global. Badges de testes atualizados (75). PENDENTE (proximo passo, deep docs ainda em PT): docs/INTEGRATION.md, docs/ARCHITECTURE.md, docs/MCP_REMOTE.md, docs/DEPLOY.md, docs/M3_TIER1_SUPABASE.md, CONTRIBUTING.md, PRD.md. CLAUDE.md e LIFELINE.md ficam em PT de proposito (laws internas + line gerada = dogfood). O README EN linka esses docs PT por ora (snippets sao copia-e-cola, agnosticos de idioma).
