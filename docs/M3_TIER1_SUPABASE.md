@@ -34,7 +34,8 @@ service_role). **Do not** use `service_role` for multi-tenant write: it bypasses
 
 1. **Create project** — done (the URL above).
 2. **Run the schema** — Dashboard → **SQL Editor → New query** → paste
-   [`cloud/schema.sql`](../cloud/schema.sql) → **Run** (or run it via Supabase MCP). It creates:
+   the schema (generate it with **`lifeline schema`**, or see [`lifeline/schema.sql`](../lifeline/schema.sql))
+   → **Run** (or run it via Supabase MCP). It creates:
    - `lifeline_entries` — the ledger, with indexes/dedup/`seq` and **append-only RLS** (only
      SELECT/INSERT of the user's own; UPDATE/DELETE denied by the absence of a policy);
    - `lifeline_proposals` — the **HITL queue** (mutable: SELECT/INSERT/UPDATE by the owner; no

@@ -1,6 +1,6 @@
 -- Lifeline — Tier 1 (Supabase / Postgres). Espelha o ledger local, multi-tenant via RLS.
--- Cole no SQL Editor do seu projeto (Dashboard → SQL Editor → New query → Run).
--- NÃO precisa compartilhar nenhuma key para rodar isto — é no seu dashboard.
+-- Cole no SQL Editor do seu projeto (Dashboard → SQL Editor → New query → Run),
+-- ou gere com: `lifeline schema`.  NÃO precisa compartilhar key para rodar isto.
 --
 -- Append-only POR CONSTRUÇÃO: só SELECT e INSERT têm policy → UPDATE/DELETE são negados
 -- pela RLS. Isso impõe a Lei #2 (append-only) e a Lei #1 (âncora) no próprio banco.

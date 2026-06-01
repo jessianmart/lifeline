@@ -213,6 +213,12 @@ async def cmd_migrate(src, db):
     return await ingest_markdown(src, store)
 
 
+def cmd_schema() -> str:
+    """O schema SQL da nuvem (Supabase), empacotado — cole no SQL Editor ou `lifeline schema | psql`."""
+    from importlib.resources import files
+    return files("lifeline").joinpath("schema.sql").read_text(encoding="utf-8")
+
+
 async def cmd_context(db, budget, query=None):
     store = await _open(db)
     recall = None
@@ -314,6 +320,7 @@ def main(argv=None) -> int:
     pc.add_argument("--budget", type=int, default=8000)
     pc.add_argument("--query", default=None, help="prioriza o que é relevante à tarefa (Camada 3)")
     sub.add_parser("lines", help="lista as lines do projeto (.lifeline/*.db)")
+    sub.add_parser("schema", help="imprime o schema SQL da nuvem (Supabase) — cole no SQL Editor")
 
     ppush = sub.add_parser("push", help="sync via git: rebuild + commit + push da view")
     ppush.add_argument("--out", default=DEFAULT_OUT)
@@ -400,6 +407,10 @@ def _dispatch(args, db, out) -> int:
     if args.cmd == "migrate":
         n = asyncio.run(cmd_migrate(args.src, db))
         print(f"Migradas {n} entradas de {args.src} para {db}.")
+        return 0
+
+    if args.cmd == "schema":
+        print(cmd_schema())
         return 0
 
     if args.cmd == "context":

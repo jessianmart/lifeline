@@ -1188,3 +1188,17 @@ Diagnostico: o ci.yml fazia 'pip install -e .[cloud]' (so deps de runtime: pydan
 
 **Body**:
 Primeiro release publico. Disparado por tag v0.1.0 -> workflow publish.yml (que ganhou gatilho de tag) -> build + pypa/gh-action-pypi-publish via OIDC, SEM token (o dono submeteu o Trusted Publisher no PyPI; eu fiz todo o resto). Run: SUCCESS. Verificado ao vivo: venv limpa, 'pip install lifeline-context' (do PyPI) -> importa v0.1.0, comando 'lifeline' OK, 3 console scripts (lifeline/lifeline-mcp/lifeline-mcp-remote). Tambem: CI ficou verde (#0064, faltava pytest). Badge do PyPI adicionado aos READMEs. Impacto: o maior atrito de instalacao morreu — os snippets de conexao (Claude Code/Cursor/Gemini) agora funcionam em qualquer maquina com lifeline-mcp no PATH. Releases futuros: bump de versao + tag vX.Y.Z (ou Release) -> publica sozinho. Falta do hibrido: AS (#0049) pros conectores web.
+
+### #0066 — 2026-06-01T17:11:57.327997+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: Fecha gaps 1-3 do audit OSS: higiene (SECURITY/CHANGELOG/templates), schema empacotado + comando 'lifeline schema', testes de integracao (cobertura 80->84%) — bump 0.1.1
+- **parents**: c0a3d288f31298c19901a02d8f067dab14af17d1b496e4fda985411fdec5ebbf
+- **id**: 0ff79dca7e6adf5e7776a75726070d599929d0615236f17dcee6e3ce2605e498
+
+**Body**:
+Resposta ao audit de prontidao OSS. (1) HIGIENE: SECURITY.md (reporte via GitHub Private Vulnerability Reporting; threat-model local-trust vs cloud-RLS/HITL), CHANGELOG.md (Keep-a-Changelog, com 0.1.0 + 0.1.1), .github/ISSUE_TEMPLATE.md e PULL_REQUEST_TEMPLATE.md (PR template amarra na constituicao: pytest+verify+anexar entrada). (2) SCHEMA EMPACOTADO: cloud/schema.sql movido p/ lifeline/schema.sql (fonte unica), package-data no pyproject -> vai no wheel (confirmado), comando 'lifeline schema' (importlib.resources) imprime o SQL -> cloud-via-pip nao precisa do repo. Refs nos docs (M3/MCP_REMOTE/CONTRIBUTING) atualizadas; LIFELINE.md nao tocada (gerada/append-only, entradas antigas sao fato historico). (3) TESTES DE INTEGRACAO: TestCLIMain (main() despacha log/verify/schema + rede-de-erro -> exit 1 sem traceback) e handlers MCP de leitura (project_context/recall contra store temp). Cobertura: cli 62->70%, mcp_server 65->76%, total 80->84% (core segue 100%). Suite 78 passa / 5 skip. Bump 0.1.0->0.1.1 (0.1.0 no PyPI e imutavel; schema-no-wheel chega no 0.1.1). Veredito: OSS sobe de ~8.5 pra ~9.5; falta so o #0029 (recall denso) pro salto de produto.

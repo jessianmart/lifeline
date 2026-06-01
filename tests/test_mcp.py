@@ -62,6 +62,28 @@ class TestMCPBackendAndHITL(unittest.IsolatedAsyncioTestCase):
         _, n = await cli.cmd_verify(db)
         self.assertEqual(n, 0)                                # …e NÃO na line (0 entradas seladas)
 
+    async def test_handlers_read_the_line(self):
+        # executa os handlers de LEITURA (project_context, lifeline_recall) contra um store real
+        from lifeline.store import SQLiteEventStore
+        from lifeline.entry import Entry
+        cli._STORE.update(kind="sqlite", line="ledger")
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        self.addCleanup(setattr, srv, "_DB", srv._DB)
+        db = os.path.join(d, ".lifeline", "ledger.db")
+        os.makedirs(os.path.dirname(db))
+        srv._DB = db
+        s = SQLiteEventStore(db)
+        await s.initialize()
+        await s.append(Entry(kind="bootstrap", author="a", summary="Funda Z", body="why"))
+        await s.append(Entry(kind="decision", author="a", summary="use SQLite", body="simple"))
+
+        ctx = await srv.project_context()                     # resource montado
+        self.assertIn("Funda Z", ctx)
+        self.assertIn("use SQLite", ctx)
+        self.assertIn("use SQLite", await srv.lifeline_recall("sqlite"))         # recall acha
+        self.assertIn("Nada relevante", await srv.lifeline_recall("zzqxyznada"))  # sem match → mensagem vazia
+
 
 class TestOAuthResourceServer(unittest.IsolatedAsyncioTestCase):
     def _verifier(self, handler):

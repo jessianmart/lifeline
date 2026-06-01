@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lifeline.cli import (  # noqa: E402
     cmd_log, cmd_verify, cmd_rebuild, cmd_lines, resolve_paths, DEFAULT_DB, DEFAULT_OUT,
 )
+import lifeline.cli as cli  # noqa: E402
 
 
 class TestCLI(unittest.IsolatedAsyncioTestCase):
@@ -90,6 +91,33 @@ class TestCLI(unittest.IsolatedAsyncioTestCase):
                       "note", "y", "", "a", "x", "p", "m", None)
         rows = await cmd_lines(root)
         self.assertEqual({n for n, _ in rows}, {"a", "b"})
+
+
+class TestCLIMain(unittest.TestCase):
+    """Despacho do main() (argparse + dispatch + rede-de-erro) — a 'cola' que os cmd_* nao exercem."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.db = os.path.join(self.dir, ".lifeline", "ledger.db")
+        self.out = os.path.join(self.dir, "LIFELINE.md")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+        cli._STORE.update(kind="sqlite", line="ledger")  # nao vazar entre testes
+
+    def test_main_log_verify_schema(self):
+        rc = cli.main(["--db", self.db, "log", "--out", self.out,
+                       "--kind", "bootstrap", "--summary", "X", "--body", "y"])
+        self.assertEqual(rc, 0)
+        self.assertTrue(os.path.exists(self.out))
+        self.assertEqual(cli.main(["--db", self.db, "verify"]), 0)   # cadeia integra
+        self.assertEqual(cli.main(["schema"]), 0)                     # imprime o schema empacotado
+
+    def test_main_error_net_returns_1(self):
+        # erro inesperado (migrate de arquivo inexistente) → mensagem amigavel + exit 1, sem traceback
+        rc = cli.main(["--db", os.path.join(self.dir, "x.db"),
+                       "migrate", "--from", os.path.join(self.dir, "nope.md")])
+        self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lifeline-context"
-version = "0.1.0"
+version = "0.1.1"
 description = "Runtime de contexto para desenvolvimento com IA — o projeto guarda por que ele é o que é; qualquer IA conecta e já sabe."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -48,6 +48,10 @@ lifeline-mcp-remote = "lifeline.mcp_server:main_remote"
 # (packages=["lifeline"] que excluía subpacotes), caso subpacotes surjam.
 [tool.setuptools.packages.find]
 include = ["lifeline*"]
+
+# empacota o schema da nuvem junto → `lifeline schema` funciona após pip install
+[tool.setuptools.package-data]
+lifeline = ["schema.sql"]
 
 # `_legacy/` é a rev0 arquivada (importa a API antiga). Nunca coletar como teste.
 [tool.pytest.ini_options]

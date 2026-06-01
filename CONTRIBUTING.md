@@ -44,7 +44,8 @@ lifeline verify         # the chain must be intact (OK)
 - `lifeline/` — the package. `tests/` — the suites. `scripts/` — proofs and utilities
   (`acceptance`, `firetest`, `exam`, `mcp_live_test`, `migrate_check`).
 - `docs/ARCHITECTURE.md` — the technical design and the *why* (with references to the entries).
-- `cloud/` — the Supabase schema (`schema.sql`). `docs/MCP_REMOTE.md` / `docs/DEPLOY.md` — the cloud.
+- `lifeline/schema.sql` — the Supabase cloud schema (print it with `lifeline schema`).
+  `docs/MCP_REMOTE.md` / `docs/DEPLOY.md` — the cloud.
 - The previous SDK (rev0) is preserved in **git history** (it's gitignored, not in the tree) —
   reference, not executed.
 

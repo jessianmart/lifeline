@@ -12,7 +12,7 @@ Backend chosen by env (same factory as the CLI): local SQLite **or** Supabase (c
 ## Run
 
 ```bash
-# cloud (multi-tenant via RLS) — requires the schema applied (cloud/schema.sql)
+# cloud (multi-tenant via RLS) — requires the schema applied (run: lifeline schema)
 export LIFELINE_STORE=supabase
 export SUPABASE_URL=https://rzphncyjrilhwpuemrcl.supabase.co
 export SUPABASE_KEY=<project apikey>      # don't commit — use .env
