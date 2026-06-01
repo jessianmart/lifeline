@@ -1,54 +1,56 @@
-# Contribuindo com o Lifeline
+# Contributing to Lifeline
 
-A regra é a constituição do projeto: **se você mexeu de forma significativa, anexe na line.**
-Humanos e agentes obedecem igual.
+The rule is the project's constitution: **if you made a significant change, append it to the line.**
+Humans and agents obey alike.
 
-## O fluxo
+## The flow
 
-1. **Conecte:** `lifeline context` (ou leia `LIFELINE.md`, começando pela #0001).
-2. **Faça o trabalho** — uma unidade coerente por vez.
-3. **Anexe o *porquê*:**
+1. **Connect:** `lifeline context` (or read `LIFELINE.md`, starting from #0001).
+2. **Do the work** — one coherent unit at a time.
+3. **Append the *why*:**
    ```bash
-   lifeline log --kind decision --summary "≤200 chars: o quê" --body "o PORQUÊ (pesa mais)"
+   lifeline log --kind decision --summary "≤200 chars: the what" --body "the WHY (weighs more)"
    ```
    `kind ∈ {bootstrap, decision, feature, fix, incident, milestone, release, note, open, correction}`.
-   - Reverter/fechar algo: `lifeline log --kind correction --parents <id> --summary "…"`.
-4. **Verifique:** `lifeline verify` deve dar `OK`.
+   - Revert/close something: `lifeline log --kind correction --parents <id> --summary "…"`.
+4. **Verify:** `lifeline verify` must return `OK`.
 
-> O store (`.lifeline/ledger.db`) é a fonte de verdade; a `LIFELINE.md` é **gerada** e
-> **não deve ser editada à mão** — ela se regenera a cada `log`.
+> The store (`.lifeline/ledger.db`) is the source of truth; `LIFELINE.md` is **generated** and
+> **must not be edited by hand** — it regenerates on every `log`.
 
-## As regras de uma boa entrada
+## The rules of a good entry
 
-- **Uma entrada por unidade de trabalho com significado** — não por arquivo, não por tool call.
-- **O *porquê* > o *quê*** (Lei #5). O `summary` diz o quê; o `body` diz por quê, e é o que
-  tem valor pra próxima IA.
-- **Append-only** (Lei #2): nunca edite o passado; corrija com uma entrada nova.
+- **One entry per meaningful unit of work** — not per file, not per tool call.
+- **The *why* > the *what*** (Law #5). The `summary` says the what; the `body` says the why, and that
+  is what has value for the next AI.
+- **Append-only** (Law #2): never edit the past; correct it with a new entry.
 
 ## Quality gate
 
-Antes de declarar qualquer trabalho feito:
+Before declaring any work done:
 
 ```bash
-# da pasta v2/
-for t in entry store state context projection cli mcp recall; do python tests/test_$t.py; done
-lifeline verify
+python -m pytest        # the suite (live tests skip without SUPABASE_* env)
+lifeline verify         # the chain must be intact (OK)
 ```
 
-- Código novo só entra **com teste que prova o comportamento** (TDD-friendly; os testes são
+- New code only lands **with a test that proves the behavior** (TDD-friendly; the tests are
   dependency-free, `unittest`).
-- As **7 leis** e os **non-goals** (ver `README.md` / `AGENTS.md`) são inegociáveis. Uma
-  proposta que exige o Lifeline *executar* ou *treinar* está fora de escopo.
+- The **7 laws** and the **non-goals** (see `README.md` / `AGENTS.md`) are non-negotiable. A
+  proposal that requires Lifeline to *execute* or *train* is out of scope.
 
-## Estrutura
+## Structure
 
-- `lifeline/` — o pacote. `tests/` — as suítes. `scripts/` — provas e utilitários
+- `lifeline/` — the package. `tests/` — the suites. `scripts/` — proofs and utilities
   (`acceptance`, `firetest`, `exam`, `mcp_live_test`, `migrate_check`).
-- `docs/ARCHITECTURE.md` — o desenho técnico e o *porquê* (com referências às entradas).
-- O SDK anterior está em `../_legacy/` — referência, não executado.
+- `docs/ARCHITECTURE.md` — the technical design and the *why* (with references to the entries).
+- `cloud/` — the Supabase schema (`schema.sql`). `docs/MCP_REMOTE.md` / `docs/DEPLOY.md` — the cloud.
+- The previous SDK (rev0) is preserved in **git history** (it's gitignored, not in the tree) —
+  reference, not executed.
 
-## Setup de desenvolvimento
+## Development setup
 
 ```bash
-pip install -e .          # instala lifeline + lifeline-mcp (editável)
+pip install -e .          # installs lifeline + lifeline-mcp (editable)
+pip install -e ".[cloud]" # optional: cloud mode (Supabase)
 ```

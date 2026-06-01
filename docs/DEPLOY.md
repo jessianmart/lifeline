@@ -1,48 +1,57 @@
-# Deploy — conector AUTHLESS pro claude.ai (validação)
+# Deploy — AUTHLESS connector for claude.ai (validation)
 
-Objetivo: provar o **one-click** ("conecto e o claude.ai já sabe o contexto do projeto") **sem
-construir AS** — usando o modo authless que o claude.ai aceita. É o passo de **validação**;
-multi-tenant pago vem depois com o AS (#0049). Pesquisa que embasa: line #0052.
+Goal: prove the **one-click** ("I connect and claude.ai already knows the project context") **without
+building an AS** — using the authless mode that claude.ai accepts. It's the **validation** step;
+paid multi-tenant comes later with the AS (#0049). Research that backs this: line #0052.
 
-## ⚠️ Segurança (leia antes)
-Authless + endpoint público = **qualquer um com a URL lê o contexto** e pode **enfileirar
-propostas**. Mitigações reais:
-- A escrita é **HITL**: a IA só **propõe** (pendente); nada entra na line sem você aprovar.
-  O pior que um intruso faz é **sujar a fila de propostas** (você rejeita) — não corrompe a line.
-- Use uma **line não-sensível** (este demo expõe a própria LIFELINE.md do projeto — pública no
-  GitHub de qualquer forma) e uma URL difícil de adivinhar.
-- **NÃO use authless com dado privado/real.** Pra isso é multi-tenant + AS (#0049).
+> ⚠️ Reality check (#0057): the **claude.ai WEB connector currently attempts OAuth** and may reject a
+> pure-authless server with *"Couldn't register with the sign-in service"*. The authless path works
+> reliably from the **CLIs** (Claude Code: `claude mcp add --transport http lifeline <url>/mcp`).
+> For the web app you likely need the AS (#0049). This deploy still gives you a real public endpoint
+> to validate from the CLIs and to build the AS on top of.
 
-## Deploy no Render (recomendado — $0, usa o `Dockerfile`)
-A imagem reconstrói o `.db` da `LIFELINE.md` no boot e serve authless. Duas formas:
+## ⚠️ Security (read first)
+Authless + public endpoint = **anyone with the URL reads the context** and can **enqueue
+proposals**. Real mitigations:
+- The write is **HITL**: the AI only **proposes** (pending); nothing enters the line without your
+  approval. The worst an intruder does is **dirty the proposal queue** (you reject it) — it doesn't
+  corrupt the line.
+- Use a **non-sensitive line** (this demo exposes the project's own LIFELINE.md — public on GitHub
+  anyway) and a hard-to-guess URL.
+- **Do NOT use authless with private/real data.** For that it's multi-tenant + AS (#0049).
 
-**A) Blueprint (lê o `render.yaml`, menos cliques):**
-1. [render.com](https://render.com) → sign up (login GitHub).
-2. **New → Blueprint** → conecte o repo `jessianmart/lifeline` → ele lê o `render.yaml` → **Apply**.
+## Deploy on Render (recommended — $0, uses the `Dockerfile`)
+The image rebuilds the `.db` from `LIFELINE.md` on boot and serves authless. Two ways:
+
+**A) Blueprint (reads `render.yaml`, fewer clicks):**
+1. [render.com](https://render.com) → sign up (GitHub login).
+2. **New → Blueprint** → connect the `jessianmart/lifeline` repo → it reads `render.yaml` → **Apply**.
 
 **B) Manual:**
-1. **New → Web Service** → conecte o repo → **Runtime: Docker** → **Instance Type: Free** → **Create**.
+1. **New → Web Service** → connect the repo → **Runtime: Docker** → **Instance Type: Free** → **Create**.
 
-Em ambos, espere o build terminar. A URL fica `https://<seu-serviço>.onrender.com`.
+In both cases, wait for the build to finish. The URL is `https://<your-service>.onrender.com`.
 
-**Confirme que subiu:** abra `https://<seu-serviço>.onrender.com/healthz` no navegador → deve mostrar **`ok`**.
+**Confirm it came up:** open `https://<your-service>.onrender.com/healthz` in the browser → it should show **`ok`**.
 
-⚠️ **Free tier dorme após 15 min ocioso.** O 1º acesso do claude.ai acorda o serviço (~1 min) —
-se a 1ª tentativa der timeout, tente de novo. Pra sempre-on (sem cold start): troque pra
-**Starter ($7/mês)** no `render.yaml` (`plan: starter`) ou no dashboard. (Railway $5/mês é a
-alternativa quando aprovarmos a viabilidade.)
+⚠️ **Free tier sleeps after 15 min idle.** The first access wakes the service (~1 min) — if the first
+attempt times out, try again. For always-on (no cold start): switch to **Starter ($7/month)** in
+`render.yaml` (`plan: starter`) or in the dashboard. (Railway $5/month is the alternative once we
+approve its viability.)
 
-> Teste local antes (opcional, se sua rede deixar): `lifeline-mcp-remote` + um túnel
-> (`npx cloudflared tunnel --url http://127.0.0.1:8000`). ⚠️ Cuidado: muitas redes **bloqueiam
-> a porta 7844** do cloudflared (a nossa bloqueava) — se o túnel cair, é a rede; o Render resolve.
+> Test locally first (optional, if your network allows it): `lifeline-mcp-remote` + a tunnel
+> (`npx cloudflared tunnel --url http://127.0.0.1:8000`). ⚠️ Careful: many networks **block
+> cloudflared's port 7844** (ours did) — if the tunnel drops, it's the network; Render solves it.
 
-## Registrar no claude.ai (o clique é seu)
-1. claude.ai → **Settings → Connectors → Add custom connector**.
-2. Cole `https://<seu-host>/mcp` · **Authentication: None** (authless) · Save.
-3. Numa conversa, habilite o conector. O resource `lifeline://project/context` e as tools
-   (`lifeline_recall`, e as de escrita **HITL** `lifeline_append`/`recontextualize`) aparecem.
-4. Pergunte algo do projeto — o claude.ai responde pelo contexto da line. **Esse é o teste.**
+## Connect a client to the deployed URL
+- **Claude Code (works now, authless):** `claude mcp add --transport http lifeline https://<your-service>.onrender.com/mcp`
+- **claude.ai web:** Settings → Connectors → Add custom connector → `https://<your-service>.onrender.com/mcp`
+  · Authentication: None. (May require the AS — see the reality check above.)
 
-## Quando for além da validação
-Multi-tenant (cada usuário a sua line) → ligue `LIFELINE_OAUTH=1` + um AS (provedor gerenciado
-com DCR, ou shim). O **Resource Server já está pronto** (`docs/MCP_REMOTE.md`); falta só o AS (#0049).
+Then, in a conversation, enable the connector and ask something about the project — it answers from
+the line context. **That's the test.**
+
+## When you go beyond validation
+Multi-tenant (each user their own line) → turn on `LIFELINE_OAUTH=1` + an AS (managed provider with
+DCR, or a shim). The **Resource Server is already ready** (`docs/MCP_REMOTE.md`); only the AS (#0049)
+is missing.

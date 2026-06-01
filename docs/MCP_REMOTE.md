@@ -1,92 +1,93 @@
-# MCP remoto (HTTP/SSE) — a superfície da nuvem
+# Remote MCP (HTTP/SSE) — the cloud surface
 
-A **mesma** superfície MCP do modo local, servida por HTTP — pra uma IA conectar de fora
-(não só via stdio). Recursos/tools idênticos, escrita **continua HITL**:
+The **same** MCP surface as local mode, served over HTTP — so an AI can connect from outside
+(not just via stdio). Identical resources/tools, write **stays HITL**:
 
-- **Ler:** resource `lifeline://project/context` + tool `lifeline_recall`.
-- **Propor (HITL):** tools `lifeline_append` / `lifeline_recontextualize` → entram como
-  PENDENTES; um humano aprova (`lifeline review`/`approve`) antes de entrar na line.
+- **Read:** resource `lifeline://project/context` + tool `lifeline_recall`.
+- **Propose (HITL):** tools `lifeline_append` / `lifeline_recontextualize` → enter as
+  PENDING; a human approves (`lifeline review`/`approve`) before entering the line.
 
-Backend escolhido por env (mesmo factory da CLI): SQLite local **ou** Supabase (nuvem).
+Backend chosen by env (same factory as the CLI): local SQLite **or** Supabase (cloud).
 
-## Rodar
+## Run
 
 ```bash
-# nuvem (multi-tenant via RLS) — precisa do schema aplicado (cloud/schema.sql)
+# cloud (multi-tenant via RLS) — requires the schema applied (cloud/schema.sql)
 export LIFELINE_STORE=supabase
 export SUPABASE_URL=https://rzphncyjrilhwpuemrcl.supabase.co
-export SUPABASE_KEY=<apikey do projeto>      # NÃO comite — use .env
-export SUPABASE_TOKEN=<access token JWT>      # escrita sob RLS
+export SUPABASE_KEY=<project apikey>      # don't commit — use .env
+export SUPABASE_TOKEN=<JWT access token>  # write under RLS
 export LIFELINE_MCP_HOST=0.0.0.0 LIFELINE_MCP_PORT=8000
 lifeline-mcp-remote
 ```
 
-- Transporte: `LIFELINE_MCP_TRANSPORT=sse` (default) → endpoints `GET /sse` + `POST /messages`;
-  ou `streamable-http` → `/mcp`.
-- Backend local (sem nuvem): omita `LIFELINE_STORE` → SQLite (`LIFELINE_DB`).
-- Line: `LIFELINE_LINE=<nome>` (default `ledger`).
+- Transport: `LIFELINE_MCP_TRANSPORT=sse` (default) → endpoints `GET /sse` + `POST /messages`;
+  or `streamable-http` → `/mcp`.
+- Local backend (no cloud): omit `LIFELINE_STORE` → SQLite (`LIFELINE_DB`).
+- Line: `LIFELINE_LINE=<name>` (default `ledger`).
+- Behind a tunnel/proxy/deploy, the public Host is allowed by default; pin it with
+  `LIFELINE_MCP_ALLOWED_HOSTS=host1,host2` (#0054).
 
-## Deploy (zero-custo, honesto)
+## Deploy (zero-cost, honest)
 
-É um servidor **Python** (FastMCP + uvicorn/starlette). **NÃO** roda em Supabase Edge
-Functions (essas são Deno/TypeScript). Rotas de custo-zero/baixo:
+It's a **Python** server (FastMCP + uvicorn/starlette). It does **NOT** run on Supabase Edge
+Functions (those are Deno/TypeScript). Zero-/low-cost routes:
 
-- **Fly.io / Render / Railway** (free tier) — um processo `lifeline-mcp-remote` com as env
-  vars; o Supabase continua sendo o store.
-- **Container** próprio (`pip install lifeline-context[cloud]` + as env vars).
-- Dev/local exposto por túnel (cloudflared/ngrok) pra testar rápido.
+- **Render / Railway / Fly.io** (free/cheap tier) — a single `lifeline-mcp-remote` process with the
+  env vars; Supabase remains the store. Step-by-step in `docs/DEPLOY.md`.
+- Your own **container** (`pip install lifeline-context[cloud]` + the env vars; a `Dockerfile` ships).
+- Dev/local exposed via tunnel (cloudflared/ngrok) for quick testing.
 
-O Supabase segue de graça como **store** (Postgres+RLS); o host só roda o processo MCP.
+Supabase stays free as the **store** (Postgres+RLS); the host only runs the MCP process.
 
 ## OAuth / multi-tenant (Resource Server) — `LIFELINE_OAUTH=1`
 
-Ligue com `LIFELINE_OAUTH=1` (+ `LIFELINE_STORE=supabase` + `SUPABASE_URL`/`KEY`). O servidor
-vira um **OAuth 2.1 Resource Server**:
+Turn it on with `LIFELINE_OAUTH=1` (+ `LIFELINE_STORE=supabase` + `SUPABASE_URL`/`KEY`). The server
+becomes an **OAuth 2.1 Resource Server**:
 
-- Exige `Authorization: Bearer <JWT do usuário>` em cada requisição; valida contra o Supabase
-  (`/auth/v1/user`). Inválido/expirado → **401**.
-- Escopa o store pelo **JWT daquele usuário** → multi-tenant real via RLS (`owner=auth.uid()`):
-  cada usuário só vê/propõe na própria line. (Sem `LIFELINE_OAUTH`, é single-tenant via o
-  `SUPABASE_TOKEN` do ambiente.)
-- Publica o **discovery** em `GET /.well-known/oauth-protected-resource` (RFC 9728), apontando
-  o Authorization Server (`LIFELINE_OAUTH_ISSUER`, default `…/auth/v1`).
+- Requires `Authorization: Bearer <user JWT>` on every request; validates against Supabase
+  (`/auth/v1/user`). Invalid/expired → **401**.
+- Scopes the store by **that user's JWT** → real multi-tenant via RLS (`owner=auth.uid()`):
+  each user only sees/proposes in their own line. (Without `LIFELINE_OAUTH`, it's single-tenant via
+  the environment's `SUPABASE_TOKEN`.)
+- Publishes the **discovery** at `GET /.well-known/oauth-protected-resource` (RFC 9728), pointing
+  to the Authorization Server (`LIFELINE_OAUTH_ISSUER`, default `…/auth/v1`).
 
 ```bash
 export LIFELINE_OAUTH=1 LIFELINE_STORE=supabase
 export SUPABASE_URL=… SUPABASE_KEY=<apikey>
-export LIFELINE_MCP_PUBLIC_URL=https://seu-host   # url pública (vai no metadata)
+export LIFELINE_MCP_PUBLIC_URL=https://your-host   # public url (goes into the metadata)
 lifeline-mcp-remote
 ```
 
-**Conectar agora pelos CLIs (NÃO pelos apps web):** o **Claude Code** e o **Gemini CLI** aceitam
-token por header — ex.: `claude mcp add --transport sse lifeline https://seu-host/sse --header "Authorization: Bearer <jwt>"`.
-⚠️ **O claude.ai web e o ChatGPT NÃO aceitam Bearer estático** (`static_bearer` não suportado);
-nos apps hospedados é **authless** ou **OAuth** — ver abaixo.
+**Connect right now via the CLIs (NOT via the web apps):** **Claude Code** and the **Gemini CLI**
+accept a token by header — e.g.: `claude mcp add --transport http lifeline https://your-host/mcp --header "Authorization: Bearer <jwt>"`.
+⚠️ **claude.ai web and ChatGPT do NOT accept a static Bearer** (`static_bearer` not supported);
+on the hosted apps it's **authless** or **OAuth** — see below.
 
-## Conectar nos apps web (claude.ai / ChatGPT) — o que a pesquisa confirmou (jun/2026)
+## Connecting on the web apps (claude.ai / ChatGPT) — what the research confirmed (Jun/2026)
 
-- **claude.ai aceita conector AUTHLESS** (`auth: "none"`) → dá pra ter "conectar em um clique"
-  **sem AS nenhum** — mas **sem identidade por usuário** (serve p/ single-tenant / line
-  compartilhada, não p/ multi-tenant). Ótimo pra **validar** o valor antes de investir no AS.
-- **Multi-tenant (cada um vê o seu) exige um Authorization Server** (authorize+token+PKCE+
-  metadata). **MAS DCR NÃO é obrigatório:** o claude.ai aceita **CIMD** ou **client
-  pré-registrado** (creds via `mcp-review@anthropic.com`); o ChatGPT aceita CIMD/clients
-  predefinidos. DCR só elimina o setup manual.
-- **Bearer estático não serve** nos apps web (só nos CLIs). ChatGPT exige **Developer Mode**
-  (planos pagos; o free não tem).
-- **AS zero-custo com DCR (quando for construir):** Cloudflare `workers-oauth-provider` (OSS,
-  free Workers), Keycloak (OSS, self-host), Stytch (free ~10K MAU). **Pegadinha de integração:**
-  o AS precisa render identidade compatível com a RLS do Supabase (`auth.uid()`) — o mais limpo é
-  o AS usar o Supabase Auth como login, ou re-plugar o RS no JWKS do provedor.
+- **claude.ai accepts an AUTHLESS connector** (`auth: "none"`) → "connect in one click" with **no
+  AS at all** — but **without per-user identity** (good for single-tenant / a shared line, not
+  multi-tenant). Great for **validating** the value before investing in the AS.
+- **Multi-tenant (each user sees their own) requires an Authorization Server** (authorize+token+PKCE+
+  metadata). **BUT DCR is NOT mandatory:** claude.ai accepts **CIMD** or a **pre-registered
+  client** (creds via `mcp-review@anthropic.com`); ChatGPT accepts CIMD/predefined clients.
+  DCR only removes the manual setup.
+- **A static Bearer doesn't work** on the web apps (only on the CLIs). ChatGPT requires **Developer
+  Mode** (paid plans; the free tier doesn't have it).
+- **Zero-cost AS with DCR (when you build it):** Cloudflare `workers-oauth-provider` (OSS, free
+  Workers), Keycloak (OSS, self-host), Stytch (free ~10K MAU). **Integration gotcha:** the AS must
+  yield an identity compatible with Supabase's RLS (`auth.uid()`) — the cleanest way is for the AS
+  to use Supabase Auth as the login, or to re-plug the RS into the provider's JWKS.
 
-> Resumo: o **Resource Server** (validação + metadata + multi-tenant) está pronto e testado.
-> Pro one-click hospedado — **authless valida sem AS**; multi-tenant **precisa de AS, não de DCR**.
-> (Pesquisa ancorada na line #0052; próximo passo do AS = #0049.)
+> Summary: the **Resource Server** (validation + metadata + multi-tenant) is ready and tested.
+> For the hosted one-click — **authless validates without an AS**; multi-tenant **needs an AS, not
+> DCR**. In all routes, **our RS doesn't change** — it already validates the JWT and scopes per user.
+> (Research anchored in line #0052; next step for the AS = #0049.)
 
-Em todos, **o nosso RS não muda** — ele já valida o JWT e escopa por usuário.
+## Security
 
-## Segurança
-
-Credenciais só via ambiente (`.env`, gitignored) — nunca em commit. Escrita sempre HITL:
-a IA remota **propõe**, o humano cura. O servidor não expõe `approve`/`reject` (curadoria
-é local/confiável), nem os comandos de git (`push/pull/clone`).
+Credentials only via the environment (`.env`, gitignored) — never in a commit. Write is always HITL:
+the remote AI **proposes**, the human curates. The server does not expose `approve`/`reject` (curation
+is local/trusted), nor the git commands (`push/pull/clone`).

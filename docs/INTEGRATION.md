@@ -1,34 +1,34 @@
-# Integração — fechando o loop sem humano
+# Integration — closing the loop without a human
 
-O Lifeline tem dois lados, e a IA dirige os dois:
+Lifeline has two sides, and the AI drives both:
 
-- **Ler ao conectar** → resource MCP `lifeline://project/context` (ou `python -m lifeline context`).
-- **Escrever ao trabalhar** → tools MCP `lifeline_append` / `lifeline_recontextualize` (ou `python -m lifeline log`).
+- **Read on connect** → MCP resource `lifeline://project/context` (or `python -m lifeline context`).
+- **Write while working** → MCP tools `lifeline_append` / `lifeline_recontextualize` (or `python -m lifeline log`).
 
-## Cliente MCP (qualquer um)
+## MCP client (any of them)
 
-Aponte o cliente para o servidor stdio:
+Point the client at the stdio server:
 
 ```
 LIFELINE_DB=.lifeline/ledger.db python -m lifeline.mcp_server
 ```
 
-- **Resource:** `lifeline://project/context` — leia ao abrir a sessão.
+- **Resource:** `lifeline://project/context` — read it when opening the session.
 - **Tools:** `lifeline_append(kind, summary, body, …)`, `lifeline_recontextualize(parent_id, summary, body, …)`.
-- **Comando do server:** `lifeline-mcp` (após `pip install -e .`) ou `python -m lifeline.mcp_server` (da raiz do repo).
+- **Server command:** `lifeline-mcp` (after `pip install -e .`) or `python -m lifeline.mcp_server` (from the repo root).
 
-## Snippets por-cliente (copia-e-cola)
+## Per-client snippets (copy-and-paste)
 
-**Claude Code** — já lê o `.mcp.json` do projeto **automaticamente**. Sem ele: `claude mcp add lifeline -- lifeline-mcp`.
+**Claude Code** — already reads the project's `.mcp.json` **automatically**. Without it: `claude mcp add lifeline -- lifeline-mcp`.
 
-**Cursor** — `.cursor/mcp.json` (na raiz do projeto):
+**Cursor** — `.cursor/mcp.json` (at the project root):
 ```json
 { "mcpServers": { "lifeline": { "command": "lifeline-mcp", "env": { "LIFELINE_DB": ".lifeline/ledger.db" } } } }
 ```
 
-**Claude Desktop** — `claude_desktop_config.json` (use caminho ABSOLUTO — o cwd difere):
+**Claude Desktop** — `claude_desktop_config.json` (use an ABSOLUTE path — the cwd differs):
 ```json
-{ "mcpServers": { "lifeline": { "command": "lifeline-mcp", "env": { "LIFELINE_DB": "C:/caminho/do/projeto/.lifeline/ledger.db" } } } }
+{ "mcpServers": { "lifeline": { "command": "lifeline-mcp", "env": { "LIFELINE_DB": "C:/path/to/project/.lifeline/ledger.db" } } } }
 ```
 
 **Gemini CLI** — `~/.gemini/settings.json`:
@@ -36,13 +36,13 @@ LIFELINE_DB=.lifeline/ledger.db python -m lifeline.mcp_server
 { "mcpServers": { "lifeline": { "command": "lifeline-mcp", "env": { "LIFELINE_DB": ".lifeline/ledger.db" } } } }
 ```
 
-> Apps de chat WEB (claude.ai, ChatGPT) **não** entram aqui — exigem servidor remoto + OAuth
-> (ver `docs/MCP_REMOTE.md`). Estes snippets são pros clientes de dev/CLI/IDE (stdio, local).
+> WEB chat apps (claude.ai, ChatGPT) do **not** belong here — they require a remote server + OAuth
+> (see `docs/MCP_REMOTE.md`). These snippets are for dev/CLI/IDE clients (stdio, local).
 
-## Auto-connect no Claude Code (hook de SessionStart)
+## Auto-connect in Claude Code (SessionStart hook)
 
-Injete o contexto no início de cada sessão via `.claude/settings.json` do projeto
-(o stdout do hook entra no contexto). Exemplo — ajuste ao schema de hooks da sua versão:
+Inject the context at the start of each session via the project's `.claude/settings.json`
+(the hook's stdout enters the context). Example — adjust to your version's hook schema:
 
 ```json
 {
@@ -54,6 +54,6 @@ Injete o contexto no início de cada sessão via `.claude/settings.json` do proj
 }
 ```
 
-Sem hook, a convenção mínima (no CLAUDE.md) é: **ao abrir, rode `python -m lifeline context`
-e leia antes de agir.** Ao tomar qualquer decisão/feature/fix, anexe — assim a próxima IA
-(ou você amanhã) conecta e já sabe.
+Without a hook, the minimal convention (in CLAUDE.md) is: **on opening, run `python -m lifeline context`
+and read it before acting.** When making any decision/feature/fix, append — that way the next AI
+(or you tomorrow) connects and already knows.

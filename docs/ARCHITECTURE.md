@@ -1,117 +1,118 @@
-# Arquitetura do Lifeline
+# Lifeline Architecture
 
-Documento técnico. Para o *porquê* de cada decisão, a fonte é a `LIFELINE.md` (as entradas
-`decision` citadas entre colchetes, ex.: `#0002`).
+Technical document. For *the why* behind each decision, the source is `LIFELINE.md` (the `decision` entries cited in brackets, e.g.: `#0002`).
 
-## Visão de 10 mil pés
+## 10,000-foot view
 
-O Lifeline é um **ledger de raciocínio event-sourced**. Tudo é uma `Entry` imutável,
-content-addressed, encadeada num DAG. A "verdade atual" e o contexto que uma IA lê são
-**projeções derivadas** desse ledger — nunca a fonte. Três camadas de memória, todas
-ancoradas no mesmo ledger:
+Lifeline is an **event-sourced reasoning ledger**. Everything is an immutable, content-addressed `Entry`, chained in a DAG. The "current truth" and the context an AI reads are **derived projections** of that ledger — never the source. Three layers of memory, all anchored in the same ledger:
 
 ```
-                      Camada 3 · Recall (semântico)
-                      embeddings ancorados → "o relevante à tarefa"
+                      Layer 3 · Recall (semantic)
+                      anchored embeddings → "what is relevant to the task"
                                   ▲
-   Entry (append) ──▶ Camada 1 · Ledger ──reduce──▶ Camada 2 · Estado ──assemble──▶ payload
-                      (DAG hasheado,                  (verdade atual,                 (markdown,
-                       fonte de verdade)               via reducers)                   por budget)
+   Entry (append) ──▶ Layer 1 · Ledger ──reduce──▶ Layer 2 · State ──assemble──▶ payload
+                      (hashed DAG,                   (current truth,                (markdown,
+                       source of truth)               via reducers)                  by budget)
                                   │
-                                  └── projection ──▶ LIFELINE.md (view diffável)
+                                  └── projection ──▶ LIFELINE.md (diffable view)
 ```
 
-Mapa de módulos (`lifeline/`):
+Module map (`lifeline/`):
 
-| Módulo | Camada / papel |
+| Module | Layer / role |
 |---|---|
-| `entry.py` | a `Entry` content-addressed (identidade) |
-| `store.py` | `EventStore` (port) + `SQLiteEventStore` (Camada 1) |
-| `state.py` | `StateEngine` + reducers (Camada 2) |
-| `recall.py` | `Embedder` + `LexicalEmbedder` + `SemanticRecall` (Camada 3) |
-| `context.py` | `ContextAssembler` — monta o payload |
-| `projection.py` | store → markdown (a view gerada) |
-| `ingest.py` | markdown → store (migração) |
-| `cli.py` / `__main__.py` | a CLI `lifeline` |
-| `mcp_server.py` | o servidor MCP (`lifeline-mcp`) |
+| `entry.py` | the content-addressed `Entry` (identity) |
+| `store.py` | `EventStore` (port) + `SQLiteEventStore` (Layer 1) |
+| `state.py` | `StateEngine` + reducers (Layer 2) |
+| `recall.py` | `Embedder` + `LexicalEmbedder` + `SemanticRecall` (Layer 3) |
+| `context.py` | `ContextAssembler` — assembles the payload |
+| `projection.py` | store → markdown (the generated view) |
+| `ingest.py` | markdown → store (migration) |
+| `staging.py` | `StagingStore` (port) + `SQLiteStagingStore` — the HITL proposal queue |
+| `cli.py` / `__main__.py` | the `lifeline` CLI |
+| `mcp_server.py` | the MCP server (`lifeline-mcp` / `lifeline-mcp-remote`) |
+| `cloud.py` | Supabase adapters (`SupabaseEventStore`, `SupabaseStagingStore`) — the cloud seam |
 
-## 1. O modelo de evento — content-addressing determinístico  [#0002, #0003]
+## 1. The event model — deterministic content-addressing  [#0002, #0003]
 
 ```
 id = sha256( kind \n author \n agent \n provider \n model \n summary \n body.strip()
              \n "|".join(sorted(parents)) )
 ```
 
-- `ts` (timestamp) e `dedup_key` ficam **fora** do hash. Consequência: o mesmo conteúdo +
-  os mesmos pais geram o **mesmo `id` em qualquer máquina, em qualquer momento**. É o que
-  torna dedup e merge entre nós/usuários possíveis (somos *mais* content-puros que o git,
-  cujo commit-sha inclui timestamp).
-- `parents` é **ordenado** no hash → a identidade é invariante à ordem em que os pais foram
-  listados (um merge de A+B = de B+A).
-- `pydantic strict=True`. O `id` é selado num `model_validator`; `verify()` recomputa e
-  compara (tamper-evidence por entrada).
+- `ts` (timestamp) and `dedup_key` stay **out** of the hash. Consequence: the same content +
+  the same parents produce the **same `id` on any machine, at any time**. This is what
+  makes dedup and merge across nodes/users possible (we are *more* content-pure than git,
+  whose commit-sha includes the timestamp).
+- `parents` is **sorted** in the hash → identity is invariant to the order in which the parents
+  were listed (a merge of A+B = of B+A).
+- `pydantic strict=True`. The `id` is sealed in a `model_validator`; `verify()` recomputes and
+  compares (per-entry tamper-evidence).
 
-## 2. Camada 1 — o Ledger (`SQLiteEventStore`)
+## 2. Layer 1 — the Ledger (`SQLiteEventStore`)
 
-Append-only. Tabela `entries` (id único, payload JSON, kind, ts, dedup_key, parents) +
-tabela `edges` (DAG) + índice único em `dedup_key`. WAL ligado. `append()` é **idempotente**:
-viola PK (`id`) ou `dedup_key` → ignora silenciosamente (resolve o problema de "split-brain"
-de forma trivial). `stream()` devolve em ordem causal de inserção (single-writer). É a
-**fonte de verdade de runtime**.
+Append-only. `entries` table (unique id, JSON payload, kind, ts, dedup_key, parents) +
+`edges` table (DAG) + unique index on `dedup_key`. WAL on. `append()` is **idempotent**:
+violating the PK (`id`) or `dedup_key` → silently ignored (it solves the "split-brain" problem
+trivially). `stream()` returns in causal insertion order (single-writer). It is the
+**runtime source of truth**.
 
-`EventStore` é uma **port abstrata** — o `SQLiteEventStore` é o adapter local; um
-`SupabaseEventStore` (M3) implementa a mesma interface sem tocar no core. É a costura da nuvem.
+`EventStore` is an **abstract port** — the `SQLiteEventStore` is the local adapter; the
+`SupabaseEventStore` (M3) implements the same interface without touching the core. It is the cloud seam.
 
-## 3. Camada 2 — o Estado (`StateEngine` + reducers)
+## 3. Layer 2 — the State (`StateEngine` + reducers)
 
-Dobra o stream em "verdade atual" via reducers puros `(estado, entry) -> estado`. O reducer
-padrão `ledger_projection` produz: identidade (`project`), `decisions` em vigor, `open_items`,
-`latest`, `contributors` (autoria agregada por provider/modelo), `kinds`, e `superseded`.
+Folds the stream into "current truth" via pure reducers `(state, entry) -> state`. The default
+reducer `ledger_projection` produces: identity (`project`), `decisions` in effect, `open_items`,
+`latest`, `contributors` (authorship aggregated by provider/model), `kinds`, and `superseded`.
 
-**Status é projeção, não FSM** [#0002]: nada de máquina de estados de execução; o "estado" é
-o que os reducers calculam. Reducers customizados podem ser registrados.
+**Status is a projection, not an FSM** [#0002]: no execution state machine; the "state" is
+what the reducers compute. Custom reducers can be registered.
 
-**Supersessão** [#0018]: ao encontrar uma `correction`, seus `parents` entram no conjunto
-`superseded`; decisões e threads abertas com esse id saem da verdade atual. Append-only:
-fechar/reverter é uma entrada *nova*, nunca edição.
+**Supersession** [#0018]: when a `correction` is encountered, its `parents` enter the `superseded`
+set; decisions and open threads with that id leave the current truth. Append-only:
+closing/reverting is a *new* entry, never an edit.
 
-## 4. Camada 3 — Recall (`SemanticRecall` + `Embedder`)
+## 4. Layer 3 — Recall (`SemanticRecall` + `Embedder`)
 
-`Embedder` é plugável [#0015]: um modelo por índice. Default `LexicalEmbedder` —
-term-frequency esparso, cosseno **exato**, determinístico, sem dependência. (Tentamos hashing
-primeiro; o teste pegou colisão de buckets gerando falsa relevância → TF esparso dá 0 exato
-sem token compartilhado.) `SemanticRecall.search(query, k)` devolve top-k **ancorado** ao
-evento (Lei #1) — o vetor é só índice; errar o match não vira alucinação. Um embedder
-semântico denso (sentence-transformers/API) pluga atrás da mesma interface (`#0029`, aberto).
+`Embedder` is pluggable [#0015]: one model per index. Default `LexicalEmbedder` —
+sparse term-frequency, **exact** cosine, deterministic, no dependency. (We tried hashing
+first; the test caught a bucket collision producing false relevance → sparse TF gives an exact 0
+without a shared token.) `SemanticRecall.search(query, k)` returns top-k **anchored** to the
+event (Law #1) — the vector is only an index; getting the match wrong does not turn into a
+hallucination. A dense semantic embedder (sentence-transformers/API) plugs in behind the same
+interface (`#0029`, open).
 
-## 5. Montagem (`ContextAssembler`)
+## 5. Assembly (`ContextAssembler`)
 
-Renderiza **markdown** [#0010] (mais token-eficiente que JSON/YAML para LLMs) dentro de um
-budget. **Prioridade de orçamento:** header + "Relevante" (se houver `query`) + "Em aberto" +
-"Recente" são sempre incluídos; as decisões preenchem o resto, mantendo as **mais recentes** e
-omitindo as antigas com **marcador explícito** (Lei #6 — truncamento nunca silencioso). Itens
-superseded aparecem marcados `[fechado/revertido]` na "Recente".
+Renders **markdown** [#0010] (more token-efficient than JSON/YAML for LLMs) within a
+budget. **Budget priority:** header + "Relevant" (if there is a `query`) + "Open" +
+"Recent" are always included; the decisions fill the rest, keeping the **most recent** ones and
+omitting the old ones with an **explicit marker** (Law #6 — truncation is never silent). Superseded
+items appear marked `[closed/reverted]` under "Recent".
 
-## 6. Projeção e o cutover store-é-fonte  [#0014, #0020, #0022]
+## 6. Projection and the store-is-source cutover  [#0014, #0020, #0022]
 
-`render_ledger_markdown(store)` gera a `LIFELINE.md` a partir do ledger. `ingest_markdown`
-faz o caminho inverso. Os dois formam um **ponto fixo** (provado): store → markdown → store
-reproduz os mesmos `id`s, e o 2º render é byte-idêntico.
+`render_ledger_markdown(store)` generates `LIFELINE.md` from the ledger. `ingest_markdown`
+does the reverse path. The two form a **fixed point** (proven): store → markdown → store
+reproduces the same `id`s, and the 2nd render is byte-identical.
 
-Isso unificou os dois esquemas de hash que coexistiam (cadeia markdown vs id do Entry) no
-`id` content-addressed. **Decisão de artefato git** [#0022]: o que se commita é o **texto**
-(`LIFELINE.md`, diffável/mergeável em PR); o `.lifeline/*.db` é **cache local** (gitignored),
-reconstruível com `lifeline migrate`. Como texto↔store são losslessly interconversíveis, a
-fonte de verdade é *o conjunto de entradas content-addressed*, materializado como ambos.
+This unified the two hashing schemes that coexisted (markdown chain vs `Entry` id) into the
+content-addressed `id`. **Git artifact decision** [#0022]: what gets committed is the **text**
+(`LIFELINE.md`, diffable/mergeable in PRs); the `.lifeline/*.db` is a **local cache** (gitignored),
+rebuildable with `lifeline migrate`. Since text↔store are losslessly interconvertible, the
+source of truth is *the set of content-addressed entries*, materialized as both.
 
-## 7. Superfície MCP (`mcp_server.py`)  [Lei #7]
+## 7. MCP surface (`mcp_server.py`)  [Law #7]
 
-Fecha o loop sem humano. **Resource** `lifeline://project/context` (leitura) + **tools**
-`lifeline_append`, `lifeline_recontextualize`, `lifeline_recall` (escrita/recall). DB via env
-`LIFELINE_DB` (default `.lifeline/ledger.db`, relativo ao cwd → cada projeto sua própria line).
+Closes the loop without a human. **Resource** `lifeline://project/context` (read) + **tools**
+`lifeline_append`, `lifeline_recontextualize`, `lifeline_recall` (write/recall). DB via the env
+`LIFELINE_DB` (default `.lifeline/ledger.db`, relative to the cwd → each project its own line).
+The same surface runs locally (stdio) and remotely (HTTP/SSE, `lifeline-mcp-remote`, with an
+optional OAuth Resource Server) — see `docs/MCP_REMOTE.md`.
 
-## Invariantes (resumo)
+## Invariants (summary)
 
-1. Nenhuma memória sem âncora imutável.  2. Append-only.  3. Content-addressing determinístico.
-4. Storage agnóstico de provider; entrega por provider.  5. Porquê > quê.  6. Budget
-first-class (truncamento explícito).  7. MCP-native.
+1. No memory without an immutable anchor.  2. Append-only.  3. Deterministic content-addressing.
+4. Provider-agnostic storage; per-provider delivery.  5. Why > what.  6. Budget
+first-class (explicit truncation).  7. MCP-native.
