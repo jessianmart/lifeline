@@ -4,17 +4,6 @@
       "command": "lifeline-mcp",
       "args": [],
       "env": { "LIFELINE_DB": ".lifeline/ledger.db" }
-    },
-    "supabase": {
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@supabase/mcp-server-supabase@latest",
-        "--project-ref=rzphncyjrilhwpuemrcl"
-      ],
-      "env": { "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}" }
     }
   }
 }

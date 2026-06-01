@@ -31,6 +31,22 @@ from lifeline.cli import _STORE, _open, _staging, _validate
 _DB = os.environ.get("LIFELINE_DB", os.path.join(".lifeline", "ledger.db"))
 _AUTHOR = os.environ.get("LIFELINE_AUTHOR", "mcp")
 
+# Manual de uso entregue a TODA IA que conecta (FastMCP envia no initialize). AI-first: a IA
+# se onboarda sozinha, segue o loop, e sabe explicar/organizar pro humano.
+_INSTRUCTIONS = (
+    "Lifeline é o ledger de RACIOCÍNIO deste projeto (o *porquê*), append-only e "
+    "content-addressed. AO CONECTAR: leia PRIMEIRO o resource `lifeline://project/context` — "
+    "é a verdade montada (o quê / por quê / decidido / próximo); aja a partir dela. Use "
+    "`lifeline_recall(query)` para 'já decidimos algo sobre X?'. AO TRABALHAR: a cada "
+    "decisão/feature/fix/incidente com significado, PROPONHA via `lifeline_append(kind, summary, "
+    "body)` — o body é o *porquê* (obrigatório). Reverteu/atualizou algo: "
+    "`lifeline_recontextualize(parent_id, ...)`. Você NÃO grava na verdade: a escrita é HITL — "
+    "entra como PROPOSTA e o humano aprova/rejeita. NUNCA invente: toda afirmação ancora numa "
+    "entrada. SEU PAPEL com o humano: explique o que o Lifeline é, mantenha o contexto "
+    "ORGANIZADO (aponte as decisões em vigor, sinalize threads fechadas, proponha entradas pelo "
+    "trabalho feito) — mas quem cura é ele. Não aceite sujeira."
+)
+
 
 def _configure() -> None:
     """Escolhe backend/line pelo ambiente (mesmo `_STORE` que a CLI usa em _open/_staging)."""
@@ -145,7 +161,7 @@ def _register(server: FastMCP) -> FastMCP:
 
 
 # instância default (local/stdio e testes) — sem auth
-mcp = _register(FastMCP("Lifeline"))
+mcp = _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS))
 
 
 # ---- OAuth Resource Server (multi-tenant) -------------------------------------------------
@@ -199,12 +215,12 @@ def _build_remote() -> FastMCP:
         port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
         resource = os.environ.get("LIFELINE_MCP_PUBLIC_URL", f"http://localhost:{port}")
         return _register(FastMCP(
-            "Lifeline",
+            "Lifeline", instructions=_INSTRUCTIONS,
             token_verifier=SupabaseTokenVerifier(),
             auth=AuthSettings(issuer_url=issuer, resource_server_url=resource, required_scopes=[]),
             transport_security=ts,
         ))
-    return _register(FastMCP("Lifeline", transport_security=ts))
+    return _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS, transport_security=ts))
 
 
 def main():

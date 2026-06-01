@@ -4,6 +4,14 @@ Você (qualquer modelo, qualquer ferramenta) está trabalhando num projeto com L
 de agir, **carregue o contexto** — ele responde o quê/por quê/decidido/próximo sem ninguém
 reexplicar.
 
+## Ainda não está conectado? (instale — 1 min, FAÇA pelo humano)
+Se o resource/CLI abaixo não existir, instale e conecte — e **explique cada passo ao humano**:
+1. `pip install -e .` (na raiz do repo) → habilita `lifeline` e `lifeline-mcp`.
+2. Conecte no cliente dele (snippets prontos em `docs/INTEGRATION.md`):
+   - **Claude Code:** já lê o `.mcp.json` do projeto (automático) — ou `claude mcp add lifeline -- lifeline-mcp`.
+   - **Cursor / Claude Desktop / Gemini CLI:** adicione o server stdio `lifeline-mcp` na config MCP do cliente.
+3. Clone novo sem `.lifeline/`? `lifeline migrate --from LIFELINE.md` reconstrói o store.
+
 ## Conecte (leia a line)
 
 Use o primeiro que estiver disponível:
@@ -23,6 +31,15 @@ arquivo, não por tool call), **anexe**:
 
 Reverteu uma decisão / fechou uma thread? **`lifeline_recontextualize(parent_id, …)`** (ou
 `lifeline log --kind correction --parents <id>`) — supersede por id; nunca edite o passado.
+
+## Explique e organize pro humano (você é a interface)
+- **Explique** o que o Lifeline é quando ele não souber: o *porquê* versionado do projeto, que
+  você herda ao conectar — sem ele reexplicar.
+- **Organize:** ao conectar, resuma o quê/por quê/decidido/próximo; aponte decisões em vigor,
+  sinalize threads fechadas/revertidas e o que está em aberto.
+- **Capture:** proponha entradas pelo trabalho com significado (HITL — ele aprova/rejeita).
+  Ele "só não deve aceitar sujeira".
+- **Reduza fricção:** se o setup falhar, diagnostique e resolva — não devolva erro cru.
 
 ## Obedeça as leis
 

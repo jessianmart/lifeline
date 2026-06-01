@@ -1,0 +1,29 @@
+# Lifeline
+
+> Runtime de contexto para desenvolvimento com IA — o "git do raciocínio". Um ledger
+> append-only, content-addressed e ancorado do *porquê* do projeto. Qualquer IA lê ao conectar
+> (via MCP) e já sabe o quê / por quê / decidido / próximo — sem o humano reexplicar.
+> Local-first, OSS, MCP-native. Escrita é HITL: a IA PROPÕE, o humano cura (anti-sujeira).
+
+## Para IAs — comece aqui
+- [AGENTS.md](AGENTS.md): seu onboarding completo — conectar, trabalhar, INSTALAR, e EXPLICAR/ORGANIZAR pro humano.
+- Ao conectar via MCP você recebe instruções de uso embutidas (no `initialize`).
+
+## Usar (a superfície)
+- Resource MCP `lifeline://project/context` (servidor `lifeline-mcp`) **ou** `lifeline context`: a verdade montada, dentro do budget.
+- Tool `lifeline_recall(query)`: relevância ancorada ("já decidimos algo sobre X?").
+- Tools `lifeline_append(kind, summary, body)` / `lifeline_recontextualize(parent_id, …)`: escrita HITL (proposta → aprovação humana).
+
+## Instalar / conectar
+- Instalar: `pip install -e .` (raiz do repo) → comandos `lifeline`, `lifeline-mcp`.
+- [.mcp.json](.mcp.json): server stdio (o Claude Code lê automaticamente).
+- [docs/INTEGRATION.md](docs/INTEGRATION.md): snippets copia-e-cola por cliente (Claude Code, Cursor, Claude Desktop, Gemini CLI).
+
+## Entender
+- [README.md](README.md): visão, quickstart, status.
+- [LIFELINE.md](LIFELINE.md): a própria line do projeto — comece pela **#0001**; é o porquê de tudo, em ordem.
+- [CLAUDE.md](CLAUDE.md): as 7 leis (a constituição). [PRD.md](PRD.md): o produto e a métrica-norte (Tempo-até-Contexto → 0).
+
+## Nuvem (opcional)
+- Clientes de DEV (Claude Code, Cursor, Gemini CLI) conectam no OSS local direto, grátis.
+- Apps de chat WEB (claude.ai, ChatGPT) exigem nuvem + OAuth: [docs/MCP_REMOTE.md](docs/MCP_REMOTE.md), [docs/DEPLOY.md](docs/DEPLOY.md).

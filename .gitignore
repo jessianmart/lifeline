@@ -8,6 +8,8 @@
 # segredos — NUNCA versionar (keys do Supabase etc.)
 .env
 *.env
+# config MCP pessoal do dev (supabase etc.) — fora do repo
+.mcp.local.json
 
 # backups e snapshots/provas gerados
 *.bak
