@@ -3,6 +3,8 @@ name: Publish to PyPI
 # Publica no PyPI via Trusted Publishing (OIDC) — SEM token/segredo.
 # Dispara ao publicar um GitHub Release (ou manualmente em Actions → Run workflow).
 on:
+  push:
+    tags: ['v*']          # publica ao empurrar uma tag de versão (ex.: v0.1.0)
   release:
     types: [published]
   workflow_dispatch:
