@@ -21,9 +21,11 @@ EXAM_key.md
 __pycache__/
 *.pyc
 
-# caches de build/test
+# caches de build/test + artefatos de empacotamento (PyPI)
 *.egg-info/
 .pytest_cache/
+build/
+dist/
 
 # rev0 arquivada — fica no disco e no HISTÓRICO do git, fora da árvore versionada (#0058)
 _legacy/

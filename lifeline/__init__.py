@@ -6,7 +6,7 @@ from lifeline.context import ContextAssembler
 from lifeline.recall import Embedder, LexicalEmbedder, SemanticRecall
 from lifeline.staging import StagingStore, SQLiteStagingStore
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 __all__ = [
     "Entry", "GENESIS",
     "EventStore", "SQLiteEventStore",
