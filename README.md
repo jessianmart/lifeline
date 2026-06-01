@@ -186,13 +186,14 @@ anti-tamper, supersession, round-trip fixed-point). **Cloud (M3) functional and 
 | **M3 Tier 0** — git sync | ✅ done |
 | **M3 Tier 1** — Supabase store + append-only RLS + cloud HITL | ✅ live-validated |
 | **M3** — remote MCP (HTTP/SSE) + OAuth **Resource Server** (multi-tenant) | ✅ done |
-| **M2** — dense semantic embedder (default is lexical) | open (#0029) |
+| **M2** — dense semantic embedder (default is lexical) | ✅ opt-in (`pip install lifeline-context[embeddings]`, #0029) |
 | **OAuth Authorization Server** (DCR/auth-code for hosted connectors) | open (#0049) |
 | **M4** — multi-user (concurrent DAG merge) / hub | planned |
 
-**Honest limits today:** recall is lexical (keywords, not meaning — #0029); a hosted **paid**
-cloud needs the AS + billing (#0049) — today it's **local OSS + bring-your-own-Supabase**; no
-retry/backoff in the cloud adapter yet (log+raise only).
+**Honest limits today:** recall defaults to lexical (keywords); a **dense semantic** embedder is
+opt-in (`pip install lifeline-context[embeddings]`, then `LIFELINE_EMBEDDER=dense`, #0029). A
+hosted **paid** cloud needs the AS + billing (#0049) — today it's **local OSS +
+bring-your-own-Supabase**; no retry/backoff in the cloud adapter yet (log+raise only).
 
 ## Built by dogfooding
 

@@ -9,6 +9,7 @@ buckets gerando falsa relevância — daí o TF esparso, que dá 0 exato sem sob
 Um embedder semântico denso (sentence-transformers / API) pluga atrás da mesma interface.
 """
 import math
+import os
 import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
@@ -51,6 +52,47 @@ class LexicalEmbedder(Embedder):
         if len(a) > len(b):
             a, b = b, a
         return sum(w * b.get(t, 0.0) for t, w in a.items())
+
+
+class SentenceTransformerEmbedder(Embedder):
+    """Embedder semântico DENSO (opcional, #0029): casa por SIGNIFICADO, não por palavra.
+    Lazy-import de sentence-transformers (extra `lifeline-context[embeddings]`) — o default do
+    projeto segue sendo o LexicalEmbedder (zero-dep). Vetores normalizados → similaridade = cosseno."""
+
+    def __init__(self, model: str = "all-MiniLM-L6-v2", _model: Any = None):
+        self.name = f"st:{model}"
+        self._model_name = model
+        self._m = _model  # injetável p/ teste (evita baixar o modelo)
+
+    def _ensure(self):
+        if self._m is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError as e:
+                raise ImportError(
+                    "embedder denso precisa do extra: pip install 'lifeline-context[embeddings]'"
+                ) from e
+            self._m = SentenceTransformer(self._model_name)
+        return self._m
+
+    def embed(self, text: str) -> List[float]:
+        v = self._ensure().encode(text or "", normalize_embeddings=True)
+        return [float(x) for x in v]
+
+    def similarity(self, a: List[float], b: List[float]) -> float:
+        return float(sum(x * y for x, y in zip(a, b)))  # cosseno (vetores já normalizados)
+
+
+def make_embedder(spec: Optional[str] = None) -> Embedder:
+    """Escolhe o embedder por `spec` ou pela env LIFELINE_EMBEDDER. Default/'lexical' →
+    LexicalEmbedder (zero-dep). 'dense' → SentenceTransformerEmbedder (modelo default); qualquer
+    outro valor é tratado como nome de modelo sentence-transformers (ex.: 'all-mpnet-base-v2')."""
+    spec = (spec or os.environ.get("LIFELINE_EMBEDDER") or "lexical").strip()
+    if spec in ("lexical", "tf", ""):
+        return LexicalEmbedder()
+    if spec == "dense":
+        return SentenceTransformerEmbedder()
+    return SentenceTransformerEmbedder(model=spec)
 
 
 class SemanticRecall:

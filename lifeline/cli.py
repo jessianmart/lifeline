@@ -223,8 +223,8 @@ async def cmd_context(db, budget, query=None):
     store = await _open(db)
     recall = None
     if query:
-        from lifeline.recall import SemanticRecall
-        recall = SemanticRecall(store)
+        from lifeline.recall import SemanticRecall, make_embedder
+        recall = SemanticRecall(store, make_embedder())   # LIFELINE_EMBEDDER=dense → semântico
     return await ContextAssembler(StateEngine(store), budget_chars=budget).assemble(query=query, recall=recall)
 
 

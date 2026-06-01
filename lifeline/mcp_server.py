@@ -133,9 +133,9 @@ async def lifeline_recontextualize(parent_id: str, summary: str, body: str = "",
 async def lifeline_recall(query: str, k: int = 5) -> str:
     """Recupera as entradas mais RELEVANTES à tarefa atual (Camada 3 — ancoradas).
     Use para "já decidimos algo sobre X?" sem ler o ledger inteiro. Relevância, não recência."""
-    from lifeline.recall import SemanticRecall
+    from lifeline.recall import SemanticRecall, make_embedder
     store = await _open_request()
-    hits = await SemanticRecall(store).search(query, k=k)
+    hits = await SemanticRecall(store, make_embedder()).search(query, k=k)
     if not hits:
         return "Nada relevante encontrado no ledger."
     return "\n".join(

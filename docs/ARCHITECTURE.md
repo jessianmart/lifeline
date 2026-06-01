@@ -80,8 +80,9 @@ sparse term-frequency, **exact** cosine, deterministic, no dependency. (We tried
 first; the test caught a bucket collision producing false relevance → sparse TF gives an exact 0
 without a shared token.) `SemanticRecall.search(query, k)` returns top-k **anchored** to the
 event (Law #1) — the vector is only an index; getting the match wrong does not turn into a
-hallucination. A dense semantic embedder (sentence-transformers/API) plugs in behind the same
-interface (`#0029`, open).
+hallucination. A dense semantic embedder (`SentenceTransformerEmbedder`, #0029) plugs in behind
+the same interface — **opt-in** via the `[embeddings]` extra; select it with `LIFELINE_EMBEDDER=dense`
+(or `make_embedder(...)`). The default stays lexical (zero-dependency).
 
 ## 5. Assembly (`ContextAssembler`)
 

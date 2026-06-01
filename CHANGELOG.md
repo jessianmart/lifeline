@@ -4,6 +4,14 @@ All notable changes are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); this project is **alpha** (pre-1.0), so minor
 versions may break.
 
+## [0.2.0] — unreleased
+
+### Added
+- **Dense semantic recall (#0029):** `SentenceTransformerEmbedder` behind the existing `Embedder`
+  port — recall by **meaning**, not keywords. **Opt-in** (`pip install lifeline-context[embeddings]`);
+  select with `LIFELINE_EMBEDDER=dense` (env) or `make_embedder(...)`. The default stays
+  `LexicalEmbedder` (zero-dependency). Wired into `lifeline context --query` and the MCP `lifeline_recall`.
+
 ## [0.1.1] — unreleased
 
 ### Added

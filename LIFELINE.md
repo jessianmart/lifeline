@@ -1216,3 +1216,17 @@ Resposta ao audit de prontidao OSS. (1) HIGIENE: SECURITY.md (reporte via GitHub
 
 **Body**:
 Segundo release. Disparado por tag v0.1.1 -> publish.yml (OIDC, sem token) -> SUCCESS. Verificado: 'pip install lifeline-context==0.1.1' do PyPI funciona (apos ~1min de propagacao do indice), versao instalada 0.1.1 confirmada em venv limpa. Conteudo do 0.1.1 (gaps 1-3 do audit OSS, #0066): schema da nuvem empacotado (lifeline/schema.sql no wheel) + comando 'lifeline schema'; SECURITY.md/CHANGELOG.md/issue+PR templates; testes de integracao (main() dispatch + handlers MCP) levando cobertura 80->84% (core 100%). OSS ~9.5. Proximo: #0029 (recall semantico denso).
+
+### #0068 — 2026-06-01T17:31:39.616445+00:00 — correction
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: correction
+- **summary**: Resolve #0029: recall semantico DENSO plugado (SentenceTransformerEmbedder, opt-in) — 0.2.0
+- **parents**: 510c0989106a80ff3b615c137872ceb6aee5b2f6b77f00858269c560e7c1936f
+- **id**: f757c6fbdd52ce225e91fa28ee86b707439826bf7810f38c6e9d0696392022ee
+
+**Body**:
+Fecha o thread aberto #0029 ('plugar embedder semantico denso'). Implementado SentenceTransformerEmbedder atras do mesmo port Embedder (recall.py): lazy-import de sentence-transformers (extra [embeddings]), vetores normalizados -> similaridade = cosseno. Seletor make_embedder() le LIFELINE_EMBEDDER (default/'lexical' -> LexicalEmbedder zero-dep; 'dense' -> ST modelo default; outro valor -> nome de modelo). Wirado no cmd_context (--query) e no lifeline_recall do MCP. DEFAULT segue LEXICAL (zero friccao, zero dep) — o denso e OPT-IN. Testes: factory (default/dense/env), wiring com modelo fake (sem baixar), recall ranqueando por SIGNIFICADO via o port, erro claro sem o extra, e teste real skip-gated (related>unrelated) — suite 84 passa/6 skip. Docs (README/ARCHITECTURE) e CHANGELOG atualizados; bump 0.2.0. Era a unica lacuna de PRODUTO do audit — agora o recall casa por significado, nao so por palavra.
