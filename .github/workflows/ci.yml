@@ -18,9 +18,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install (com extra cloud p/ httpx)
-        run: pip install -e ".[cloud]"
+      - name: Install (extras cloud + dev/pytest)
+        run: pip install -e ".[cloud,dev]"
       - name: Testes
         run: python -m pytest -q
-      - name: Integridade da line (a cadeia deve verificar)
-        run: python -m lifeline verify
+      - name: Integridade da line (reconstrói da view e verifica a cadeia real)
+        run: |
+          python -m lifeline migrate --from LIFELINE.md
+          python -m lifeline verify

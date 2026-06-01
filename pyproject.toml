@@ -32,6 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cloud = ["httpx>=0.27"]  # alias explícito p/ quem só quer o store Supabase
+dev = ["pytest>=8"]       # ferramentas de teste (NÃO é dep de runtime) — usado no CI
 
 [project.urls]
 Homepage = "https://github.com/jessianmart/lifeline"
