@@ -1230,3 +1230,17 @@ Segundo release. Disparado por tag v0.1.1 -> publish.yml (OIDC, sem token) -> SU
 
 **Body**:
 Fecha o thread aberto #0029 ('plugar embedder semantico denso'). Implementado SentenceTransformerEmbedder atras do mesmo port Embedder (recall.py): lazy-import de sentence-transformers (extra [embeddings]), vetores normalizados -> similaridade = cosseno. Seletor make_embedder() le LIFELINE_EMBEDDER (default/'lexical' -> LexicalEmbedder zero-dep; 'dense' -> ST modelo default; outro valor -> nome de modelo). Wirado no cmd_context (--query) e no lifeline_recall do MCP. DEFAULT segue LEXICAL (zero friccao, zero dep) — o denso e OPT-IN. Testes: factory (default/dense/env), wiring com modelo fake (sem baixar), recall ranqueando por SIGNIFICADO via o port, erro claro sem o extra, e teste real skip-gated (related>unrelated) — suite 84 passa/6 skip. Docs (README/ARCHITECTURE) e CHANGELOG atualizados; bump 0.2.0. Era a unica lacuna de PRODUTO do audit — agora o recall casa por significado, nao so por palavra.
+
+### #0069 — 2026-06-01T17:37:13.577521+00:00 — release
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: release
+- **summary**: lifeline-context 0.2.0 publicado no PyPI — recall semantico denso (#0029) opt-in
+- **parents**: f757c6fbdd52ce225e91fa28ee86b707439826bf7810f38c6e9d0696392022ee
+- **id**: afd2abde1058679f8882ca0401fdd70dc928f30133c1075edb2859176e775581
+
+**Body**:
+Terceiro release. Tag v0.2.0 -> publish.yml (OIDC) -> SUCCESS. Verificado: pip install lifeline-context==0.2.0 do PyPI OK, versao 0.2.0, e a API do #0029 embarca (from lifeline import make_embedder, SentenceTransformerEmbedder; make_embedder() default = LexicalEmbedder). #0029 fechado na line (#0068). Estado: OSS ~9.5-10 (core 100%, integracao 84%, PyPI, docs bilingues, higiene completa, AI-first, recall semantico opt-in). Unico item aberto: #0049 (Authorization Server) — peca do cloud pago/conector web, nao qualidade do OSS.
