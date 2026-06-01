@@ -1272,3 +1272,17 @@ PORQUE: o cold-start e o gargalo de ativacao nº1 — quase ninguem adota o Life
 
 **Body**:
 PORQUE: lancamento precisa de uma porta de entrada que (a) comunique a tese em segundos e (b) seja achavel/citavel por IAs — coerente com o produto ser AI-first. DESIGN: hiperminimal, estetica Linear (Inter, dark, hairlines, acento indigo); a 'lifeline' corre na HORIZONTAL (o DAG do ledger) e o scroll vertical do mouse a percorre — cada secao e um 'no' com chip de hash, ecoando os ids reais. Progressive enhancement: o conteudo e HTML semantico real (renderiza e e crawlavel SEM JS); no mobile empilha vertical. GEO (o diferencial pedido): JSON-LD (SoftwareApplication + SoftwareSourceCode + FAQPage + TechArticle por doc), llms.txt + llms-full.txt, robots.txt convidando GPTBot/ClaudeBot/PerplexityBot/Google-Extended explicitamente, sitemap.xml, OpenGraph, canonical. ARQUITETURA (decidido com o humano): hibrido — landing horizontal + paginas de doc HTML reais (melhor extracao por IA); ingles (alcance global). As docs sao GERADAS do markdown do repo por site/build.py (saida commitada, zero dep no deploy), entao editar docs/ATUALIZA o site. Deploy por .github/workflows/pages.yml (Pages via Actions). Validado ao vivo: geometria computada confere (grid 1180px, 3 cards 381px, centralizacao vertical, dots na borda, thread no centro). FALTA 1 passo manual do humano: habilitar Pages (Settings -> Pages -> Source: GitHub Actions). Sequencia: site primeiro, anuncio da 0.2.0 quando o site estiver no ar.
+
+### #0072 — 2026-06-01T22:01:46.517578+00:00 — fix
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: fix
+- **summary**: Site: scroll horizontal travado — troca scroll-snap mandatory por none + snap-on-idle em JS
+- **parents**: 3204e622cca726581aeb589d81eaf3e656602e69a13e01ce8b95e102325f2d4b
+- **id**: 7e4d933e47414c6d731e8b20c8b44b5c1b0944b52fa213ee331d74775786ab74
+
+**Body**:
+SINTOMA: no site publicado, o scroll vertical do mouse nao rolava a tela na horizontal (parecia congelado). CAUSA (confirmada via DOM ao vivo): 'scroll-snap-type: x mandatory' no .track reverte QUALQUER scrollLeft fora de um ponto de snap — cada incremento do wheel (~320px) e menor que um painel (1440px), entao o mandatory puxava de volta ao painel atual (setar scrollLeft=600 voltava a 0 instantaneamente). 'proximity' tem uma versao branda do mesmo bug: partindo de um painel, um tick fica 'perto demais' e e revertido (scroll partindo de 0 dava [0,0,0,0]). FIX: scroll-snap-type:none (zero snap nativo brigando) + snap-on-idle controlado em JS (scheduleSnap: 140ms depois que o wheel para, scrollTo smooth ao painel mais proximo). Acumulacao livre confirmada ([320,640,960,1280,1600] partindo do zero); o snap-on-idle anima em browser real (em headless o smooth nao progride, mas o instantaneo funciona). Tambem subi o multiplicador do wheel 1.15->1.6 pro percurso ficar mais agil.

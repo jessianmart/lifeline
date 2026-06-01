@@ -95,7 +95,7 @@ h1, h2, h3 { font-weight: 560; letter-spacing: -0.025em; line-height: 1.08; }
   display: flex; flex-flow: row nowrap;
   height: 100vh; height: 100dvh;
   overflow-x: auto; overflow-y: hidden;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: none;   /* native snap (mandatory OR proximity) reverts wheel increments near a panel → freeze. JS snaps on idle instead. */
   scrollbar-width: none;
 }
 .track::-webkit-scrollbar { display: none; }

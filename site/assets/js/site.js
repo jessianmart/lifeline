@@ -25,13 +25,34 @@
   });
   var dots = Array.prototype.slice.call(dotsWrap.children);
 
+  /* snap to the nearest panel once travel settles (crisp landing without mandatory snap,
+     which would revert every wheel increment and freeze the horizontal travel) */
+  var snapTimer = null;
+  function nearestPanel() {
+    var best = panels[0], min = Infinity;
+    panels.forEach(function (p) {
+      var d = Math.abs(p.offsetLeft - track.scrollLeft);
+      if (d < min) { min = d; best = p; }
+    });
+    return best;
+  }
+  function scheduleSnap() {
+    if (isStacked()) return;
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(function () {
+      var p = nearestPanel();
+      if (Math.abs(p.offsetLeft - track.scrollLeft) > 2) track.scrollTo({ left: p.offsetLeft, behavior: "smooth" });
+    }, 140);
+  }
+
   /* vertical wheel → horizontal scroll (desktop only) */
   track.addEventListener("wheel", function (e) {
     if (isStacked()) return;                       // native vertical scroll when stacked
     var dy = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     if (dy === 0) return;
     e.preventDefault();
-    track.scrollLeft += dy * 1.15;
+    track.scrollLeft += dy * 1.6;
+    scheduleSnap();
   }, { passive: false });
 
   /* progress thread + active dot, throttled with rAF */
