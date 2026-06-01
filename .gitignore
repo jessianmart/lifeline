@@ -22,3 +22,6 @@ __pycache__/
 # caches de build/test
 *.egg-info/
 .pytest_cache/
+
+# rev0 arquivada — fica no disco e no HISTÓRICO do git, fora da árvore versionada (#0058)
+_legacy/
