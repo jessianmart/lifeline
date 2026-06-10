@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Autorizar — Lifeline</title>
-<link rel="icon" href="/lifeline/assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='4' fill='%237c89ff'/%3E%3C/svg%3E">
 <style>
   /* tokens do site (style.css) — auto-contido p/ não herdar o layout da landing */
   :root{
@@ -123,9 +123,10 @@
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// anon key é pública por design (client-side, protegida por RLS) — pode ficar no estático
-const SUPABASE_URL = 'https://rzphncyjrilhwpuemrcl.supabase.co'
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6cGhuY3lqcmlsaHdwdWVtcmNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxODIyNjMsImV4cCI6MjA5NTc1ODI2M30.eoos8tKCFA8inMVTFLh3xE6wQDlKQgiU8jQOFsIET88'
+// Injetado pelo servidor (a rota /oauth/consent substitui pelos valores do ambiente) — mantém o
+// core genérico (sem projeto hardcoded). A anon key é pública por design (client-side, RLS protege).
+const SUPABASE_URL = '__LIFELINE_SUPABASE_URL__'
+const SUPABASE_ANON = '__LIFELINE_SUPABASE_ANON__'
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON)
 const $ = (id) => document.getElementById(id)

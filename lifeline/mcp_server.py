@@ -160,6 +160,23 @@ async def _healthz(_request):
     return PlainTextResponse("ok")
 
 
+async def _oauth_consent(_request):
+    """Serve a página de consentimento do caminho OAuth Server do Supabase, injetando
+    SUPABASE_URL/KEY do ambiente. Hospeda no próprio servidor (repo pode ficar PRIVADO — sem
+    GitHub Pages) e mantém o core GENÉRICO (sem projeto hardcoded)."""
+    from starlette.responses import HTMLResponse, PlainTextResponse
+    path = os.path.join(os.path.dirname(__file__), "..", "site", "oauth", "consent", "index.html")
+    try:
+        with open(path, encoding="utf-8") as f:
+            html = f.read()
+    except FileNotFoundError:
+        return PlainTextResponse("consent page não empacotada neste deploy", status_code=404)
+    from lifeline.cloud import clean_url
+    html = (html.replace("__LIFELINE_SUPABASE_URL__", clean_url(os.environ.get("SUPABASE_URL", "")))
+                .replace("__LIFELINE_SUPABASE_ANON__", (os.environ.get("SUPABASE_KEY", "") or "").strip()))
+    return HTMLResponse(html)
+
+
 def _register(server: FastMCP) -> FastMCP:
     """Registra a MESMA superfície em qualquer instância (com ou sem auth)."""
     server.resource("lifeline://project/context")(project_context)
@@ -167,6 +184,7 @@ def _register(server: FastMCP) -> FastMCP:
     server.tool()(lifeline_recontextualize)
     server.tool()(lifeline_recall)
     server.custom_route("/healthz", methods=["GET"])(_healthz)
+    server.custom_route("/oauth/consent", methods=["GET"])(_oauth_consent)  # OAuth Server do Supabase
     return server
 
 

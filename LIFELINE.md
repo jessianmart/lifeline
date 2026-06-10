@@ -1558,3 +1558,19 @@ Mudanca externa: o Supabase lancou um OAuth 2.1 Server nativo (beta, gratis no b
 O nucleo segue legivel e auto-hospedavel (confianca + adocao), mas reserva o uso comercial CONCORRENTE (oferecer o Lifeline como servico) — a FSL converte para MIT em 2 anos por release. As versoes 0.1.0-0.2.0 ja publicadas na PyPI permanecem MIT (irrevogavel; o codigo de core+nuvem ja saiu sob MIT). Refina o licenciamento do #d9b21042 (de 'OSS/MIT' para 'source-available') sem reverter a tese open-core/hub-pago. O *porque* de negocio detalhado (alvo de receita, moat) vive na LINHA PRIVADA de estrategia, fora de qualquer repo.
 
 <!-- lifeline:end -->
+
+### #0081 — 2026-06-10T16:40:47.915307+00:00 — feature
+
+- **author**: jess
+- **agent**: claude-code
+- **provider**: anthropic
+- **model**: claude-fable-5
+- **kind**: feature
+- **summary**: Serve a consent page (caminho OAuth Server do Supabase) no proprio servidor, com SUPABASE_URL/KEY injetados do ambiente
+- **parents**: f450ab42a45256cfcea8bbc18f7972e9d0a876ce12e1dea66cf62c50e55bf93b
+- **id**: 8ab5f27a8213296ba4fadf96654fd59f16836c9277e28b6a45eca2724bbbb3af
+
+**Body**:
+Rota GET /oauth/consent serve site/oauth/consent/index.html substituindo placeholders pelo SUPABASE_URL/KEY do ambiente. Resolve duas coisas: (1) hospeda a consent page sem GitHub Pages -> o repo pode ficar PRIVADO; (2) tira o hardcode do projeto Supabase do core publico (fica generico/configuravel). O Supabase OAuth Server redireciona pra <PUBLIC_URL>/oauth/consent; favicon virou data-uri (host-agnostico). 18 testes mcp verdes.
+
+<!-- lifeline:end -->
