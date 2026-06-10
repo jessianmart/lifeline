@@ -5,7 +5,7 @@
 
 🌐 **English** · [Português](README.pt-BR.md)
 
-[![pypi](https://img.shields.io/pypi/v/lifeline-context)](https://pypi.org/project/lifeline-context/) ![status](https://img.shields.io/badge/status-alpha-orange) ![python](https://img.shields.io/badge/python-3.10%2B-blue) ![tests](https://img.shields.io/badge/tests-75%20passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
+[![pypi](https://img.shields.io/pypi/v/lifeline-context)](https://pypi.org/project/lifeline-context/) ![status](https://img.shields.io/badge/status-alpha-orange) ![python](https://img.shields.io/badge/python-3.10%2B-blue) ![tests](https://img.shields.io/badge/tests-125%20passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-green)
 
 In one line, it's **"git for reasoning"**: just as git versions *what* changed in the code,
 Lifeline versions *why* — decisions, reversals, incidents, the current state — in an
@@ -185,8 +185,8 @@ reasoning, not execution.**
 ## Status & roadmap
 
 **Alpha.** Solid, proven **local single-user** core — correctness locked by tests (determinism,
-anti-tamper, supersession, round-trip fixed-point). **Cloud (M3) functional and live-validated.**
-75 tests green; CI on GitHub Actions.
+anti-tamper, omission detection, supersession + un-supersession, round-trip fixed-point, recall
+abstention). **Cloud (M3) functional and live-validated.** 125 tests green; CI on GitHub Actions.
 
 | Milestone | State |
 |---|---|
@@ -195,7 +195,8 @@ anti-tamper, supersession, round-trip fixed-point). **Cloud (M3) functional and 
 | **M3 Tier 1** — Supabase store + append-only RLS + cloud HITL | ✅ live-validated |
 | **M3** — remote MCP (HTTP/SSE) + OAuth **Resource Server** (multi-tenant) | ✅ done |
 | **M2** — dense semantic embedder (default is lexical) | ✅ opt-in (`pip install lifeline-context[embeddings]`, #0029) |
-| **OAuth Authorization Server** (DCR/auth-code for hosted connectors) | open (#0049) |
+| **Gap audit** — prefix-resolution, read-time anchor verify, omission detection, dense abstention, lossless round-trip | ✅ done |
+| **OAuth Authorization Server** (DCR + auth-code/PKCE for hosted connectors) | ✅ done (`LIFELINE_OAUTH_AS=1`) |
 | **M4** — multi-user (concurrent DAG merge) / hub | planned |
 
 **Honest limits today:** recall defaults to lexical (keywords); a **dense semantic** embedder is

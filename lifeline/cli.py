@@ -19,7 +19,7 @@ import sys
 
 from lifeline import sync
 from lifeline.entry import Entry, KINDS
-from lifeline.store import SQLiteEventStore
+from lifeline.store import SQLiteEventStore, resolve_parents
 from lifeline.staging import SQLiteStagingStore
 from lifeline.ingest import ingest_markdown, _parse_ts
 from lifeline.projection import render_ledger_markdown
@@ -138,6 +138,8 @@ async def cmd_log(db, out, kind, summary, body, author, agent, provider, model, 
     if parents is None:
         head = await _head_id(store)
         parents = [head] if head else []
+    else:
+        parents = await resolve_parents(store, parents)  # expande prefixos / recusa órfão (#G1)
     e = Entry(kind=kind, author=author, agent=agent, provider=provider,
               model=model, summary=summary, body=body or "", parents=parents)
     inserted = await store.append(e)
@@ -165,12 +167,19 @@ async def cmd_approve(db, out, pids):
     await staging.initialize()
     store = await _open(db)
     targets = await staging.pending() if pids == ["all"] else [await staging.get(int(p)) for p in pids]
-    approved = 0
+    approved, duplicates, errors = 0, 0, []
     for prop in targets:
         if not prop or prop["status"] != "pending":
             continue
         head = await _head_id(store)
         stored = json.loads(prop["parents"]) if prop.get("parents") else []
+        try:
+            # expande prefixos / recusa parent órfão ANTES de selar (#G1): a IA via MCP só
+            # conhece ids truncadas; sem isto a correção viraria no-op silencioso.
+            stored = await resolve_parents(store, stored)
+        except ValueError as ex:
+            errors.append((prop["pid"], str(ex)))   # deixa PENDENTE; reporta, não sela
+            continue
         parents = stored or ([head] if head else [])
         kw = dict(kind=prop["kind"], author=prop["author"], agent=prop["agent"],
                   provider=prop["provider"], model=prop["model"], summary=prop["summary"],
@@ -178,11 +187,15 @@ async def cmd_approve(db, out, pids):
         ts = _parse_ts(prop["ts"])           # preserva o momento da decisão (capture-at-start)
         if ts is not None:
             kw["ts"] = ts
-        await store.append(Entry(**kw))
-        await staging.set_status(prop["pid"], "approved")
-        approved += 1
+        inserted = await store.append(Entry(**kw))   # #G7: honra o retorno (dedup ≠ aprovado)
+        if inserted:
+            await staging.set_status(prop["pid"], "approved")
+            approved += 1
+        else:
+            await staging.set_status(prop["pid"], "duplicate")
+            duplicates += 1
     n = await _write_view(store, out) if approved else 0
-    return approved, n
+    return approved, n, duplicates, errors
 
 
 async def cmd_reject(db, pids):
@@ -200,13 +213,18 @@ async def cmd_rebuild(db, out):
 
 
 async def cmd_verify(db):
+    """Integridade do ledger. Checa DUAS coisas (#G3/#G4):
+    (1) conteúdo — todo id bate com seu conteúdo (anti-adulteração, Lei #1);
+    (2) fecho referencial — todo `parent` citado existe no store (anti-OMISSÃO: deletar uma
+        entrada do meio deixa filhos com pai fantasma; o `verify` antigo não via o buraco).
+    Limite declarado: `ts` está fora do hash (Lei #3) — adulteração de relógio não é coberta."""
     store = await _open(db)
-    ok, n = True, 0
-    async for e in store.stream():
-        n += 1
-        if not e.verify():
-            ok = False
-    return ok, n
+    entries = [e async for e in store.stream()]
+    ids = {e.id for e in entries}
+    tampered = [e.id for e in entries if not e.verify()]
+    dangling = [(e.id, p) for e in entries for p in e.parents if p not in ids]
+    ok = not tampered and not dangling
+    return ok, len(entries), tampered, dangling
 
 
 async def cmd_migrate(src, db):
@@ -409,11 +427,15 @@ def _dispatch(args, db, out) -> int:
         return 0
 
     if args.cmd == "approve":
-        approved, n = asyncio.run(cmd_approve(db, out, args.pids))
+        approved, n, duplicates, errors = asyncio.run(cmd_approve(db, out, args.pids))
         if approved:
             print(f"{approved} proposta(s) aprovada(s) e seladas na line. {out} regenerado ({n} entradas).")
-        else:
+        elif not duplicates and not errors:
             print("Nada aprovado (pids inválidos ou sem pendências).")
+        if duplicates:
+            print(f"{duplicates} proposta(s) já existiam na line (dedup) — marcadas 'duplicate', não reentraram.")
+        for pid, reason in errors:
+            print(f"proposta #{pid} NÃO aprovada (segue pendente): {reason}")
         return 0
 
     if args.cmd == "reject":
@@ -425,8 +447,15 @@ def _dispatch(args, db, out) -> int:
         return 0
 
     if args.cmd == "verify":
-        ok, n = asyncio.run(cmd_verify(db))
-        print(f"{'OK' if ok else 'BROKEN'}: {n} entradas {'íntegras' if ok else 'COM FALHA'}.")
+        ok, n, tampered, dangling = asyncio.run(cmd_verify(db))
+        if ok:
+            print(f"OK: {n} entradas íntegras (conteúdo ancorado + DAG fechado).")
+        else:
+            print(f"BROKEN: {n} entradas, COM FALHA.")
+            for i in tampered:
+                print(f"  adulterada (id ≠ conteúdo): {i[:12]}…")
+            for child, parent in dangling:
+                print(f"  pai fantasma: {child[:12]}… aponta p/ {parent[:12]}… (inexistente — omissão?)")
         return 0 if ok else 1
 
     if args.cmd == "migrate":

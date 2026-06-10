@@ -33,6 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 cloud = ["httpx>=0.27"]  # alias explícito p/ quem só quer o store Supabase
 embeddings = ["sentence-transformers>=2"]  # recall semântico DENSO (#0029) — opt-in; default é lexical
+remote = ["python-multipart>=0.0.9"]  # AS OAuth hospedado: parse do form de /oauth/login e do /token
 dev = ["pytest>=8"]       # ferramentas de teste (NÃO é dep de runtime) — usado no CI
 
 [project.urls]

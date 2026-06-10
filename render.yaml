@@ -9,9 +9,14 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz      # GET 200 (sobe = saudável)
     autoDeploy: true               # redeploy a cada push na main
-    # Multi-tenant depois (#0049): defina estas no dashboard (NÃO comite segredo)
+    # Authless (default): deixe SEM envVars → conector de 1 clique, line compartilhada.
+    #
+    # Multi-tenant (Authorization Server, #0049 — FEITO): defina no dashboard (NÃO comite segredo).
+    # PUBLIC_URL e ALLOWED_HOSTS = a URL pública do serviço (ex.: lifeline-mcp.onrender.com).
     # envVars:
-    #   - key: LIFELINE_OAUTH        value: "1"
-    #   - key: LIFELINE_STORE        value: supabase
-    #   - key: SUPABASE_URL          sync: false
-    #   - key: SUPABASE_KEY          sync: false
+    #   - key: LIFELINE_OAUTH_AS           value: "1"
+    #   - key: LIFELINE_STORE              value: supabase
+    #   - key: LIFELINE_MCP_PUBLIC_URL     value: https://lifeline-mcp.onrender.com
+    #   - key: LIFELINE_MCP_ALLOWED_HOSTS  value: lifeline-mcp.onrender.com
+    #   - key: SUPABASE_URL                sync: false
+    #   - key: SUPABASE_KEY                sync: false

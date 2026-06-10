@@ -73,6 +73,8 @@ consultável/comprimível, para nunca estourar. Esta própria entrada foi escrit
 momento em que o produto se provou: o fundador não conseguiu explicar o que queria,
 e não precisou — o contexto bastou.
 
+<!-- lifeline:end -->
+
 ### #0002 — 2026-05-30T14:10:00+00:00 — decision
 
 - **author**: jessianjmb@gmail.com
@@ -98,6 +100,8 @@ hypervisor / OS distribuído" e codado pelo Gemini, virando vocabulário > subst
 (~25 arquivos vazios, sandbox/scheduler/distribuído que eram teatro). Os non-goals
 (não é OS/MMU/orquestrador/workflow/git) existem para impedir que essa inflação
 ressuscite.
+
+<!-- lifeline:end -->
 
 ### #0003 — 2026-05-30T14:20:00+00:00 — decision
 
@@ -127,6 +131,8 @@ duas dimensões) contradiz a eleição de uma só vencedora. Guarda as 5 dimens�
 planas e o retrieval escolhe na query. Branding ("Pentagrama", "Opcode 0xDB") é o
 mesmo figurino que inflou o SDK — descartado.
 
+<!-- lifeline:end -->
+
 ### #0004 — 2026-05-30T14:30:00+00:00 — decision
 
 - **author**: jessianjmb@gmail.com
@@ -154,6 +160,8 @@ paga (Supabase + pgvector + Redis Streams) para sync, time e escala. M1 = o laç
 mínimo (captura ancorada → ledger → estado → montagem → MCP) que já passa o teste de
 aceitação contra o próprio repo do Lifeline.
 
+<!-- lifeline:end -->
+
 ### #0005 — 2026-05-30T15:00:00+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -178,6 +186,8 @@ adulteração). É a primeira linha de código do produto e ela obedece à const
 Próximo: store SQLite append-only (transplante WAL/edges/dedup/DLQ do SDK antigo,
 agora determinístico) → redução de estado via reducers → montagem → resource MCP de
 contexto.
+
+<!-- lifeline:end -->
 
 ### #0006 — 2026-05-30T15:30:00+00:00 — feature
 
@@ -208,6 +218,8 @@ captura — validada ao vivo por este próprio dogfooding. Próximo: redução d
 (reducers, status como projeção) → montagem de contexto → resource MCP. Alvo do M1:
 fechar o laço e rodar o teste de aceitação contra a própria LIFELINE.
 
+<!-- lifeline:end -->
+
 ### #0007 — 2026-05-30T16:00:00+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -237,6 +249,8 @@ Seam pendente de decisão: hoje existem DOIS esquemas de hash — a cadeia da ma
 pais/DAG). Funcionam para propósitos diferentes (integridade humana vs identidade de
 runtime), mas precisam ser unificados — provavelmente gerando a markdown A PARTIR do
 store, ou alinhando as duas formas canônicas. Decisão para a próxima sessão.
+
+<!-- lifeline:end -->
 
 ### #0008 — 2026-05-30T16:45:00+00:00 — milestone
 
@@ -270,6 +284,8 @@ semântico) ausente. Pendências: unificar os dois esquemas de hash (store vira 
 markdown gerada) e transplantar vetor cosseno + compressão do SDK antigo. 17/17 testes
 verdes. M1: essencialmente concluído e provado.
 
+<!-- lifeline:end -->
+
 ### #0009 — 2026-05-30T17:15:00+00:00 — decision
 
 - **author**: jessianjmb@gmail.com
@@ -301,6 +317,8 @@ o pago. Monetização open-core provada pelo próprio GitHub (git grátis, GitHu
 Caveat honesto: a analogia comunica, mas o moat continua sendo a cunha — proveniência
 ancorada + multiprovider + o porquê>o quê.
 
+<!-- lifeline:end -->
+
 ### #0010 — 2026-05-30T17:40:00+00:00 — decision
 
 - **author**: jessianjmb@gmail.com
@@ -325,6 +343,8 @@ selecionar o relevante + sumarizar + segmentação funcional (M2). A Lei #4 deix
 aberta pra renderers por provider depois (ex.: tags XML pro Claude delimitar seções), mas
 markdown é o default. Registrado para ninguém "otimizar" pra JSON no futuro.
 
+<!-- lifeline:end -->
+
 ### #0011 — 2026-05-30T17:45:00+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -346,6 +366,8 @@ state.ledger_projection agrega `contributors` e carrega provider/model nas decis
 recentes; context.py renderiza. +1 teste (test_payload_shows_authorship). Validado contra
 a própria LIFELINE: payload de 9 entradas mostra "fundado por anthropic/claude-opus-4-8".
 
+<!-- lifeline:end -->
+
 ### #0012 — 2026-05-30T17:50:00+00:00 — fix
 
 - **author**: jessianjmb@gmail.com
@@ -365,6 +387,8 @@ e o lifeline_hash.py (que não valida kind) deixou passar, mas o modelo estrito 
 adicionado 'milestone' e 'release' ao Kind (alinhando com a prática comprovada do inframoe)
 e ao protocolo. Nota para o futuro: o uso conversacional (não-code) vai querer uma
 taxonomia de kind mais aberta/extensível — decisão adiada, mas marcada aqui.
+
+<!-- lifeline:end -->
 
 ### #0013 — 2026-05-30T18:10:00+00:00 — feature
 
@@ -386,6 +410,8 @@ uma seção "## Em aberto / próximo". +1 teste em state (coleta+fechamento) e +
 (seção presente). 18 testes verdes. As entradas #0014-#0016 a seguir são as primeiras
 threads abertas de verdade — o backlog do projeto agora vive ancorado, não em prosa solta.
 
+<!-- lifeline:end -->
+
 ### #0014 — 2026-05-30T18:11:00+00:00 — open
 
 - **author**: jessianjmb@gmail.com
@@ -404,6 +430,8 @@ fonte única; a LIFELINE.md vira uma PROJEÇÃO gerada (como a montagem), não u
 hand-edited. Isso colapsa os dois esquemas num só e torna o store primário — pré-requisito
 limpo pro sync de nuvem (M3). Fecha quando o pipeline "append no store → regenera markdown"
 existir.
+
+<!-- lifeline:end -->
 
 ### #0015 — 2026-05-30T18:12:00+00:00 — open
 
@@ -424,6 +452,8 @@ Trocar de modelo = re-embeddar (migração). O vetor é só índice pra entrada 
 Lei #1 se mantém mesmo se o embedding errar o match. Fecha quando a Camada 3 escolher e
 abstrair o embedding.
 
+<!-- lifeline:end -->
+
 ### #0016 — 2026-05-30T18:13:00+00:00 — open
 
 - **author**: jessianjmb@gmail.com
@@ -441,6 +471,8 @@ A 3ª camada de memória (recall associativo) ainda não existe. Transplantar o 
 hash do evento de origem (Lei #1). Permite "me traga as decisões passadas relevantes pra
 isto" sem estourar o budget. Depende de #0015 (política de embedding). Fecha quando o
 retrieval semântico ancorado estiver no Context Engine e testado.
+
+<!-- lifeline:end -->
 
 ### #0017 — 2026-05-30T18:40:00+00:00 — milestone
 
@@ -470,6 +502,8 @@ encolhimento). CRUCIAL: o anti-staleness só funciona se a reversão for REGISTR
 reversão silenciosa (parar de usar X sem escrever correction) deixaria a decisão velha "em
 vigor". É a fricção de captura na forma específica de reversões não-registradas.
 
+<!-- lifeline:end -->
+
 ### #0018 — 2026-05-30T18:42:00+00:00 — open
 
 - **author**: jessianjmb@gmail.com
@@ -487,6 +521,8 @@ fechada junto da `correction` que a fechou — coexistência append-only que pod
 A "Em aberto" já filtra superseded; a "Recente" não. Fix (M2): suprimir itens superseded
 da "Recente", ou marcá-los como [fechado/revertido]. Achado pelo próprio teste — o produto
 se criticando de novo.
+
+<!-- lifeline:end -->
 
 ### #0019 — 2026-05-30T19:10:00+00:00 — decision
 
@@ -524,6 +560,8 @@ porquê) — mas é uma ponte de DADO/MEMÓRIA, não de o Lifeline executar heal
 Regra: se uma proposta exige o Lifeline AGIR ou TREINAR, ela está fora de escopo; se exige
 ele LEMBRAR ancorado, está dentro.
 
+<!-- lifeline:end -->
+
 ### #0020 — 2026-05-30T19:40:00+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -551,6 +589,8 @@ log` (CLI de append) — senão escrever a próxima entrada vira "escrever Pytho
 hand-edit atual. Decisão: virar quando houver forçante (M3 sync, ou agente escrevendo via API),
 junto com a CLI. O valor já foi capturado: a dívida dos dois esquemas deixou de ser risco.
 
+<!-- lifeline:end -->
+
 ### #0021 — 2026-05-30T21:00:09.653687+00:00 — milestone
 
 - **author**: jessianjmb@gmail.com
@@ -564,6 +604,8 @@ junto com a CLI. O valor já foi capturado: a dívida dos dois esquemas deixou d
 
 **Body**:
 Cutover executado via a propria CLI nova: ESTA entrada foi escrita por python -m lifeline log (dogfood do novo fluxo). 20 entradas migradas para .lifeline/ledger.db (fonte de verdade), todas integras; LIFELINE.md regenerada no formato content-addressed (id + parents, sem prev_hash). Backup do formato antigo em LIFELINE.md.pre-cutover.bak. Preambulo reescrito pro esquema novo; lifeline_hash.py aposentado em favor de lifeline verify. Fecha a thread #0014. Anexar agora e lifeline log (encadeia no head sozinho) e a markdown se regenera.
+
+<!-- lifeline:end -->
 
 ### #0022 — 2026-05-30T21:03:37.113714+00:00 — decision
 
@@ -579,6 +621,8 @@ Cutover executado via a propria CLI nova: ESTA entrada foi escrita por python -m
 **Body**:
 Refina a #0014 com honestidade. O cutover poe o store como fonte de RUNTIME, mas commitar um .db binario briga com a tese GitHub-para-contexto: binario nao faz diff nem merge. Como o content-addressing torna texto e store losslessly interconversiveis (provado no #0020), o artefato git/sync e a LIFELINE.md (texto, diffavel, revisavel em PR) e o .lifeline/ledger.db vira cache local (gitignored), reconstruido com python -m lifeline migrate. Conclusao: a fonte de verdade e o CONJUNTO de entradas content-addressed, materializado como TEXTO (pra git/humanos) e como STORE (pra query). Nenhum e privilegiado porque sempre reconciliam.
 
+<!-- lifeline:end -->
+
 ### #0023 — 2026-05-30T21:06:47.847986+00:00 — correction
 
 - **author**: jessianjmb@gmail.com
@@ -592,6 +636,8 @@ Refina a #0014 com honestidade. O cutover poe o store como fonte de RUNTIME, mas
 
 **Body**:
 Fecha a open #0014 aplicando a propria licao do #0017: conclusao registrada, nao silenciosa. O item 3 esta completo: store e a fonte de runtime, LIFELINE.md e gerada, CLI lifeline log no ar, lifeline_hash aposentado, artefato git = o texto (#0022).
+
+<!-- lifeline:end -->
 
 ### #0024 — 2026-05-30T21:10:23.196957+00:00 — fix
 
@@ -607,6 +653,8 @@ Fecha a open #0014 aplicando a propria licao do #0017: conclusao registrada, nao
 **Body**:
 Dogfooding pegou de novo: rodar python -m lifeline context no Windows crashava no print do payload por causa do caractere de seta (U+2192), ausente em cp1252. Fix: main() reconfigura sys.stdout para utf-8 no inicio (try/except). O fechamento da #0014 ja tinha funcionado; o bug so escondia a visualizacao. Segundo bug revelado pelo proprio USO da ferramenta nesta sessao (o 1o foi o kind milestone na #0012) — evidencia de que dogfooding acha o que teste unitario nao acha.
 
+<!-- lifeline:end -->
+
 ### #0025 — 2026-05-30T21:22:41.623086+00:00 — correction
 
 - **author**: jessianjmb@gmail.com
@@ -620,6 +668,8 @@ Dogfooding pegou de novo: rodar python -m lifeline context no Windows crashava n
 
 **Body**:
 Dois fixes no Context Engine fechando o achado da prova de fogo. (1) Itens superseded aparecem marcados [fechado/revertido] na secao Recente, em vez de coexistir confusos com a propria correcao. (2) Budget agora e section-aware: header, Em aberto e Recente sao SEMPRE incluidos; decisoes preenchem o resto mantendo as mais recentes e omitindo as antigas com marcador explicito (Lei #6), no lugar do corte-de-cauda cego que podia comer o que-vem-a-seguir. state expoe superseded; +1 teste. 27 testes verdes.
+
+<!-- lifeline:end -->
 
 ### #0026 — 2026-05-30T21:45:13.997562+00:00 — feature
 
@@ -635,6 +685,8 @@ Dois fixes no Context Engine fechando o achado da prova de fogo. (1) Itens super
 **Body**:
 (a) ESCRITA via MCP: o servidor agora expoe lifeline_append (anexa decisao/feature/fix/open) e lifeline_recontextualize (supersede por id), alem do resource de leitura — a IA dirige os DOIS lados do loop, sem humano digitando. (c) AUTO-CONNECT: CLAUDE.md ganhou a secao O loop (ler ao conectar via python -m lifeline context ou resource MCP; escrever ao trabalhar); docs/INTEGRATION.md traz snippet de hook SessionStart do Claude Code e a config MCP. test_mcp confere o contrato. 7 suites verdes. Honesto: o MECANISMO de escrita-sem-humano existe; se a IA usa por habito ainda e questao comportamental, dependente da integracao pegar. Resta o gap (b): relevancia / Camada 3 (recall semantico), que depende de #0015 (embedding) — proximo passo.
 
+<!-- lifeline:end -->
+
 ### #0027 — 2026-05-30T21:58:11.100722+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -648,6 +700,8 @@ Dois fixes no Context Engine fechando o achado da prova de fogo. (1) Itens super
 
 **Body**:
 lifeline/recall.py: Embedder (costura plugavel, decisao #0015) + LexicalEmbedder default (term-frequency esparso, cosseno exato, sem dependencia) + SemanticRecall (indexa o ledger, top-k por relevancia, cada hit ANCORADO ao evento por id, Lei #1). ContextAssembler aceita query+recall e adiciona secao Relevante para a tarefa (relevancia, nao recencia). CLI: lifeline context --query. MCP: tool lifeline_recall. Licao honesta do dogfooding: tentei hashing embedder primeiro; o teste pegou colisao de buckets gerando FALSA relevancia (query sem palavra em comum pontuava 0.20) e troquei por TF esparso, que da 0 exato sem sobreposicao. 8 suites verdes.
+
+<!-- lifeline:end -->
 
 ### #0028 — 2026-05-30T21:58:33.172029+00:00 — correction
 
@@ -663,6 +717,8 @@ lifeline/recall.py: Embedder (costura plugavel, decisao #0015) + LexicalEmbedder
 **Body**:
 Politica de embedding implementada (interface plugavel + default lexical + nome do modelo gravavel) e recall semantico construido/integrado. Fecha as duas threads de uma vez (parents = ambos os ids).
 
+<!-- lifeline:end -->
+
 ### #0029 — 2026-05-30T21:58:53.665406+00:00 — open
 
 - **author**: jessianjmb@gmail.com
@@ -676,6 +732,8 @@ Politica de embedding implementada (interface plugavel + default lexical + nome 
 
 **Body**:
 O LexicalEmbedder casa sobreposicao de tokens, nao similaridade semantica (ex.: query em ingles nao casa entrada em portugues). A interface Embedder ja permite plugar um modelo denso por tras (decisao #0015), pinado por indice, gravando modelo+dim como proveniencia. Fecha quando um embedder semantico estiver disponivel e medido vs o baseline lexical.
+
+<!-- lifeline:end -->
 
 ### #0030 — 2026-05-30T22:15:21.762440+00:00 — feature
 
@@ -691,6 +749,8 @@ O LexicalEmbedder casa sobreposicao de tokens, nao similaridade semantica (ex.: 
 **Body**:
 scripts/exam.py constroi um ledger adversarial (reversoes Mongo->Postgres e REST->gRPC, multi-provider, isca de alucinacao), monta o payload e escreve EXAM_prompt.md (cole em qualquer modelo: GPT, Gemini, etc. — responde so do contexto) + EXAM_key.md (gabarito + rubrica de aprovacao). Resolve o caveat de eu ter testado so com a mesma familia de modelo. Rodar o script tambem PROVA o SDK funcional ponta a ponta (store+state+context). Status do SDK: core single-user local FUNCIONAL — 8 suites verdes, CLI completa, MCP (read resource + write tools), aceitacao e prova de fogo passados. Fronteiras honestas: nao e pip-installable ainda (sem pyproject em v2); MCP nao foi rodado live contra cliente real nesta sessao (so o contrato registrado); recall e lexical (denso = #0029); nuvem M3 inexistente.
 
+<!-- lifeline:end -->
+
 ### #0031 — 2026-05-30T22:21:39.865894+00:00 — milestone
 
 - **author**: jessianjmb@gmail.com
@@ -704,6 +764,8 @@ scripts/exam.py constroi um ledger adversarial (reversoes Mongo->Postgres e REST
 
 **Body**:
 scripts/mcp_live_test.py sobe o servidor (python -m lifeline.mcp_server, subprocesso) e fala por um cliente MCP REAL sobre stdio — mesmo protocolo do Claude Code. Round-trip: initialize (handshake), list_tools (append/recontextualize/recall), list_resources (lifeline://project/context), call_tool append x2 (escreveu no ledger PELO protocolo), read_resource (contexto refletiu as escritas: Mercurio + PostgreSQL), call_tool recall (top hit PostgreSQL score 0.53, ancorado). Logs do servidor mostram ListTools/CallTool/ReadResource processados. Ledger TEMP, sem poluir a line real. Falta apenas o APP Claude Code conectar via .mcp.json (config fornecida) — limitacao do harness atual impede anexar um servidor MCP novo no meio da sessao.
+
+<!-- lifeline:end -->
 
 ### #0032 — 2026-05-30T22:26:38.472848+00:00 — milestone
 
@@ -719,6 +781,8 @@ scripts/mcp_live_test.py sobe o servidor (python -m lifeline.mcp_server, subproc
 **Body**:
 Fecha o caveat nao-pip-installable. v2/pyproject.toml: name lifeline-context, deps pydantic+aiosqlite+mcp, requires-python >=3.10, packages.find include=lifeline* (evita o bug do SDK velho que excluia subpacotes). Entry points: lifeline (CLI) e lifeline-mcp (servidor MCP, com main() novo). PROVADO: pip install -e v2 instalou; o comando lifeline (em Scripts/) rodou de um diretorio TEMP fora do v2 e criou o proprio .lifeline/ledger.db daquele projeto — agora da pra apontar pra QUALQUER projeto, nao so dogfood. Nota honesta: o pacote lifeline ANTIGO na raiz sombreia quando cwd=raiz (sys.path[0]); rodar de outro dir ou arquivar o legado resolve.
 
+<!-- lifeline:end -->
+
 ### #0033 — 2026-05-30T22:32:38.590311+00:00 — milestone
 
 - **author**: jessianjmb@gmail.com
@@ -732,6 +796,8 @@ Fecha o caveat nao-pip-installable. v2/pyproject.toml: name lifeline-context, de
 
 **Body**:
 Movido pra _legacy/ (reversivel, sem apagar): o pacote lifeline antigo, devos/, os 12 verify_*.py, tests antigos, pyproject quebrado, egg-info, docs do SDK velho (README/northstar/prd_contextfs/llms/.cursorrules) e artefatos (execution_trace, fire_test_trace, lifeline_demo.db). Raiz agora: .git, .gitignore, v2/, _legacy/. Resultado: (1) import lifeline da raiz resolve pro v2 instalado (nao mais pro pacote antigo que sombreava sys.path[0]) — confirmado: lifeline.__file__ aponta pra v2/lifeline; (2) v2/ pronto pra virar repo proprio; (3) enacta a extracao desenhada no comeco. README minimo na raiz aponta pro v2. Legado e referencia, nao executado.
+
+<!-- lifeline:end -->
 
 ### #0034 — 2026-05-30T22:43:16.447022+00:00 — feature
 
@@ -747,6 +813,8 @@ Movido pra _legacy/ (reversivel, sem apagar): o pacote lifeline antigo, devos/, 
 **Body**:
 Doc set nivel senior em v2/: README.md (problema, ideia, install, quickstart CLI+SDK, diagrama do loop, conceitos, refs CLI/MCP/SDK, secao Para IAs, 7 leis, non-goals, status+roadmap honestos, dogfooding, licenca). docs/ARCHITECTURE.md (modelo content-addressed, 3 camadas, supersessao, montagem/budget, recall, cutover store-e-fonte, ports de nuvem, com referencias as entradas). CONTRIBUTING.md (disciplina + quality gate). AGENTS.md (onboarding tool-agnostico p/ qualquer IA: conecta pela line/MCP, obedece as leis, anexa). LICENSE MIT (default permissivo pro core OSS, open-core). A line que qualquer IA le e a propria LIFELINE.md (#0001+) / lifeline context / resource MCP — os docs apontam pra ela. Tudo em PT; EN pendente p/ alcance global.
 
+<!-- lifeline:end -->
+
 ### #0035 — 2026-05-30T23:12:13.024681+00:00 — feature
 
 - **author**: jessianjmb@gmail.com
@@ -760,6 +828,8 @@ Doc set nivel senior em v2/: README.md (problema, ideia, install, quickstart CLI
 
 **Body**:
 Resolve o gap que a demo de multi-line revelou: lines tinham .db independentes mas a view markdown (--out) tinha nome fixo LIFELINE.md e se sobrepunha. Agora resolve_paths(line, db, out) faz --line NAME mapear .lifeline/NAME.db + LIFELINE.NAME.md JUNTOS — sem colisao. Default preservado (sem --line: .lifeline/ledger.db + LIFELINE.md). Novo comando lifeline lines lista as lines do projeto. Modelo confirmado: uma LINE = um ledger nomeado (codigo OU conversa); um projeto tem 1 por default e suporta N; lines nao sao presas a projeto. Views LIFELINE.<nome>.md sao commitadas (diffaveis); .db fica em .lifeline/ (gitignored). +3 testes (resolve_paths, nao-colisao, lines). 8 suites verdes. Provado ao vivo: 2 lines (backend/codigo + research/conversa) coexistindo sem sobrepor view.
+
+<!-- lifeline:end -->
 
 ### #0036 — 2026-05-31T00:05:24.639578+00:00 — feature
 
@@ -775,6 +845,8 @@ Resolve o gap que a demo de multi-line revelou: lines tinham .db independentes m
 **Body**:
 Materializa o modelo "IA se organiza, humano cura". lifeline/staging.py (StagingStore: fila de propostas, tabela propria na mesma db; a line so recebe aprovado). CLI: propose (async/leve — NAO toca na line nem regenera view, sem latencia; captura intent+porquE; valida kind + EXIGE body = anti-sujeira no write-time), review (lista pendentes = curadoria), approve <pid|all> (sela na line preservando o ts do momento da decisao), reject. Tiering como aprovar comando shell: humano no `log` = commit direto (ele e o aprovador); IA via MCP lifeline_append/recontextualize agora PROPOE (pendente) — refina o comportamento commit-direto do #0026 (a IA dirige a captura, mas nao suja a verdade; o humano gateia). +5 testes (test_staging). 9 suites verdes. Provado ao vivo: sem porquE recusa; com porquE fica pendente; line so muda no approve.
 
+<!-- lifeline:end -->
+
 ### #0037 — 2026-05-31T00:16:21.484151+00:00 — milestone
 
 - **author**: jessianjmb@gmail.com
@@ -788,6 +860,8 @@ Materializa o modelo "IA se organiza, humano cura". lifeline/staging.py (Staging
 
 **Body**:
 lifeline/sync.py (wrappers git) + CLI push/pull/clone. Reusa o #0022 (a view textual e o artefato versionado; o .db e cache reconstruivel): push = rebuild+commit+push; pull = pull + migrate + rebuild (ingere a view mergeada, dedup por id content-addressed); clone reconstroi o .db da view clonada. Conflito de merge aborta com mensagem (resolve no LIFELINE.md, que e legivel). Provado: test_sync (push em A -> clone B -> a line propagou) + demo ao vivo com hub bare local. Resultado: cross-device + colaboracao via git, custo ZERO, GitHub vira o hub — o Tier 0 do M3 que arquitetamos, sem infra nova. Tier 1 (Supabase pros chats web) e o merge multi-writer (M4) seguem o mesmo protocolo content-addressed. +2 testes. 10 suites verdes.
+
+<!-- lifeline:end -->
 
 ### #0038 — 2026-05-31T00:32:04.869215+00:00 — decision
 
@@ -803,6 +877,8 @@ lifeline/sync.py (wrappers git) + CLI push/pull/clone. Reusa o #0022 (a view tex
 **Body**:
 Poda pedida pelo dono. Redis entrou por reflexo no esboco do M3 e nao se sustenta: (1) SYNC = git no Tier 0; (2) REAL-TIME/push = Supabase Realtime (free tier, via replicacao do Postgres) cobre o papel que seria do Redis Streams; (3) CACHE do contexto montado = in-process / tabela Postgres no MVP; (4) sem filas/jobs (o lado de execucao foi cortado, ver #0019); (5) auth/sessao = Supabase JWT. Contra o criterio de custo-zero: Redis seria mais um servico pra hospedar (custo + ops). Redis SO ganharia lugar em ESCALA (cache compartilhado de baixa latencia entre replicas) — e mesmo ai edge KV ou o proprio Supabase podem bastar; entao e, no maximo, otimizacao futura atras de um forcante real, nunca dependencia de nucleo. O SDK velho tinha um RedisEventBus stub/teatro — esta decisao impede que uma IA futura reconstrua isso. M3 enxuto: Tier 0 = git (feito); Tier 1 = Supabase (Postgres/Auth/RLS/Realtime/PostgREST) SEM Redis.
 
+<!-- lifeline:end -->
+
 ### #0039 — 2026-05-31T00:41:55.027794+00:00 — feature
 
 - **author**: unknown
@@ -816,6 +892,8 @@ Poda pedida pelo dono. Redis entrou por reflexo no esboco do M3 e nao se sustent
 
 **Body**:
 Gerado o kit do Tier 1 em cloud/ e docs/. (a) cloud/schema.sql: tabela lifeline_entries multi-tenant, dedup por (owner,line,id), seq para ordem causal, e RLS APPEND-ONLY — so SELECT/INSERT do proprio auth.uid(); sem policy de UPDATE/DELETE, entao o banco impoe as Leis #1 e #2. (b) cloud/supabase_store.py: SupabaseEventStore atras do port EventStore (PostgREST via httpx), marcado EXPERIMENTAL e FORA do core testado — promove com teste quando rodar contra projeto real. (c) docs/M3_TIER1_SUPABASE.md: runbook. Projeto do usuario: ref rzphncyjrilhwpuemrcl. Seguranca: schema roda no dashboard sem compartilhar key; runtime le SUPABASE_URL/KEY do ambiente; .env adicionado ao .gitignore; service_role nunca em chat/commit. Nao consegui operar o banco desta sessao (sem MCP do Supabase ativo aqui — conexao MCP e fixada no inicio da sessao).
+
+<!-- lifeline:end -->
 
 ### #0040 — 2026-05-31T01:03:42.849421+00:00 — milestone
 
@@ -831,6 +909,8 @@ Gerado o kit do Tier 1 em cloud/ e docs/. (a) cloud/schema.sql: tabela lifeline_
 **Body**:
 Reestruturacao (opcao b do dono). Antes: o HEAD commitado ainda era o SDK rev0; o produto real (v2/ — codigo limpo + ledger de 39 entradas) estava UNTRACKED, sem historico. Isso era incoerente com a tese 'GitHub para contexto' e impedia o Tier 0 — nao da pra 'lifeline push' uma line que nem esta num commit. Acao: movido v2/* para a raiz (sem colisao real; so .gitignore e README.md, versoes do v2 venceram); a rev0 inteira ja estava arquivada em _legacy/. Feito na branch m3/promote-v2-root para ser reversivel; main intacta na rev0 ate o merge. CLI roda da raiz (antes era 'cd v2'); store .lifeline/ viajou junto; verify OK. Pre-requisito do M3 Tier 1 (Supabase) cumprido.
 
+<!-- lifeline:end -->
+
 ### #0041 — 2026-05-31T01:31:01.483485+00:00 — feature
 
 - **author**: unknown
@@ -844,6 +924,8 @@ Reestruturacao (opcao b do dono). Antes: o HEAD commitado ainda era o SDK rev0; 
 
 **Body**:
 Opcao 1 da outra sessao, com a disciplina do #0039 (sem overclaim). (1) Adapter movido de cloud/supabase_store.py para lifeline/cloud.py — importavel apos install, com transporte httpx injetavel (httpx.MockTransport) p/ teste. (2) CLI ganhou --store {sqlite,supabase}: _open() faz o branch; log/context/verify/rebuild/migrate funcionam na nuvem pelo mesmo port EventStore; push/pull/clone/lines e o HITL ficam barrados no modo supabase (sao do store local) com mensagem clara. (3) tests/test_supabase.py: 8 testes de WIRE mockados (montagem de POST/GET, headers apikey+Bearer+Prefer, filtros eq/cs, parse de payload->Entry, idempotencia por status, erro claro sem env, guarda da CLI) que rodam sempre + 2 testes LIVE skip-gated (round-trip real e prova de que a RLS e append-only: UPDATE/DELETE negados) que so rodam com SUPABASE_URL/KEY. Suite: 53 passam, 2 skip. (4) httpx virou dep explicita do core (ja vinha via mcp) + extra [cloud]. (5) DECISAO de auth ancorada: SUPABASE_KEY deve ser access token de USUARIO (JWT) p/ auth.uid() resolver na RLS; service_role bypassa a RLS e deixa owner nulo, nao serve p/ escrita multi-tenant. Falta: a outra sessao (com o MCP/creds) rodar o schema.sql e o teste live p/ provar o contrato real; depois HITL-na-nuvem e MCP remoto SSE.
+
+<!-- lifeline:end -->
 
 ### #0042 — 2026-05-31T02:33:43.480922+00:00 — milestone
 
@@ -867,6 +949,8 @@ BUG achado por DOGFOODING (nao pelos mocks): o SupabaseEventStore mandava self.k
 
 Caveat honesto: o JWT de usuario e curto (~1h) -> auth duravel do CLI (login/refresh) e o proximo passo do Tier 1. O .mcp.json ganhou o servidor supabase oficial (npx), mas a Management API direta com o PAT ja bastou pra criar+validar; o MCP fica como opcao p/ sessoes futuras.
 
+<!-- lifeline:end -->
+
 ### #0043 — 2026-05-31T02:46:33.361118+00:00 — fix
 
 - **author**: unknown
@@ -880,6 +964,8 @@ Caveat honesto: o JWT de usuario e curto (~1h) -> auth duravel do CLI (login/ref
 
 **Body**:
 A outra sessao validou o Tier 1 ao vivo e corrigiu o cloud.py (apikey do projeto no header apikey; JWT do usuario no Authorization: Bearer), mas o commit ead2f07 nao tocou testes nem docs — entao o fix so estava protegido pelo teste LIVE (skip-gated, nao roda no CI) e os docs ficaram errados. Fechei o gap: (1) 3 testes de wire mockados que travam a separacao — apikey=projeto / Bearer=token, fallback do token p/ apikey quando ausente, e leitura de SUPABASE_KEY+SUPABASE_TOKEN do ambiente; (2) o gate dos testes live agora exige tambem SUPABASE_TOKEN (sem ele a escrita 401 em vez de pular); (3) docs/M3_TIER1_SUPABASE.md reescrito p/ o modelo de DOIS valores (SUPABASE_KEY=apikey anon, SUPABASE_TOKEN=JWT de usuario). Suite 56/56 (+2 skip live).
+
+<!-- lifeline:end -->
 
 ### #0044 — 2026-05-31T02:56:18.322228+00:00 — feature
 
@@ -895,6 +981,8 @@ A outra sessao validou o Tier 1 ao vivo e corrigiu o cloud.py (apikey do projeto
 **Body**:
 Leva a curadoria anti-sujeira pro modo nuvem (a IA propoe, o humano cura), nao so o store local. (1) staging.py: StagingStore virou PORT (ABC) + SQLiteStagingStore (impl atual). (2) cloud.py: extrai _SupabaseBase (creds/headers/client compartilhados — comportamento da auth #0042 preservado, garantido pelos wire-tests) e adiciona SupabaseStagingStore. (3) cloud/schema.sql: tabela lifeline_proposals — MUTAVEL (status muda), RLS permite SELECT/INSERT/UPDATE do dono mas SEM DELETE (preserva historico de curadoria); contraste explicito com lifeline_entries que e append-only. (4) cli.py: factory _staging() espelha _open(); propose/review/approve/reject usam o backend ativo; _LOCAL_ONLY encolheu p/ {push,pull,clone,lines} (HITL saiu — agora funciona na nuvem). (5) testes: +4 wire mockados (propose->pid com return=representation, pending filtra por line+status e normaliza parents jsonb->string JSON p/ cmd_approve ficar agnostico, get vazio, set_status PATCH por pid) + 1 live HITL round-trip skip-gated. Suite 60 passa / 3 skip. Falta: auth ergonomica do CLI e o MCP remoto SSE (superficie dos chats web).
 
+<!-- lifeline:end -->
+
 ### #0045 — 2026-05-31T03:03:45.421881+00:00 — milestone
 
 - **author**: unknown
@@ -908,6 +996,8 @@ Leva a curadoria anti-sujeira pro modo nuvem (a IA propoe, o humano cura), nao s
 
 **Body**:
 Com SUPABASE_URL/KEY/TOKEN do .env, rodei os 3 testes live contra o projeto real (rzphncyjrilhwpuemrcl): round-trip do ledger, RLS append-only (UPDATE/DELETE negados) e o round-trip HITL (propose->pending->status). O #0042 da outra sessao validou so o ledger (entries); o HITL (#0044) faltava a tabela. O MCP nesta sessao nao tem o management token em runtime (Unauthorized p/ DDL), entao apliquei cloud/schema.sql direto pela Management API (POST /v1/projects/{ref}/database/query) com o SUPABASE_ACCESS_TOKEN do .env — idempotente, criou lifeline_proposals. Suite completa: 63 passam, 0 skip (todos os live ligados). Fecha o caveat 'nao re-verifiquei a nuvem': agora o store remoto inteiro (ledger append-only + fila HITL mutavel sem-delete) esta provado de ponta a ponta. Falta do Tier 1 so o MCP remoto (SSE), a superficie dos chats web.
+
+<!-- lifeline:end -->
 
 ### #0046 — 2026-05-31T03:11:37.457755+00:00 — feature
 
@@ -923,6 +1013,8 @@ Com SUPABASE_URL/KEY/TOKEN do .env, rodei os 3 testes live contra o projeto real
 **Body**:
 Expoe a superficie MCP por HTTP (nao so stdio), pra IA conectar de fora. (1) mcp_server.py virou store-agnostico: resource/recall usam o factory _open da CLI; _configure() escolhe backend/line por env (LIFELINE_STORE=supabase usa SUPABASE_URL/KEY/TOKEN, default sqlite). (2) Novo entry-point lifeline-mcp-remote (main_remote): serve sobre SSE (/sse + /messages) ou streamable-http (/mcp), bind por LIFELINE_MCP_HOST/PORT. Mesmas tools: leitura (context+recall) e escrita HITL (append/recontextualize PROPOEM, nao commitam). (3) Testes: surface registrada (incl. recall), _configure escolhe backend por env, e a tool de escrita e HITL (proposta pendente, 0 na line). uvicorn/starlette ja presentes; sse_app/streamable_http_app constroem com rotas. Suite 63/63 (+3 live skip). CORRECAO de rota honesta: NAO roda em Supabase Edge Functions (Deno); e servidor Python, hospedavel em qualquer free-tier (Fly/Render/Railway) com o Supabase de store. FALTA: OAuth 2.1 no endpoint (exigido pelos conectores claude.ai/ChatGPT/Gemini) + multi-tenant por JWT de usuario — proximo incremento; a RLS (owner=auth.uid) ja esta pronta pra isso.
 
+<!-- lifeline:end -->
+
 ### #0047 — 2026-05-31T03:24:06.782024+00:00 — feature
 
 - **author**: unknown
@@ -936,6 +1028,8 @@ Expoe a superficie MCP por HTTP (nao so stdio), pra IA conectar de fora. (1) mcp
 
 **Body**:
 A ultima milha do M3, na parte que da pra fechar+testar aqui. (1) SupabaseTokenVerifier (TokenVerifier do SDK): valida o Bearer contra /auth/v1/user; 200->AccessToken carregando o proprio JWT + user id; 401->None. Transporte httpx injetavel p/ teste. (2) Binding por-requisicao: _request_token() le o token validado (get_access_token), e _open_request/_staging_request constroem o store/staging com o JWT DAQUELE usuario -> RLS escopa por owner=auth.uid() = multi-tenant real (sem isso era single-tenant via env). (3) _register() passou a registrar a superficie em qualquer instancia FastMCP; _build_remote() liga o Resource Server quando LIFELINE_OAUTH=1 (+supabase+creds): FastMCP(token_verifier, AuthSettings(issuer,resource_server_url)) -> exige Bearer e publica GET /.well-known/oauth-protected-resource (RFC 9728). (4) Testes: verifier valido/invalido/sem-config, build com OAuth serve metadata, build sem OAuth = servidor base. Suite 68/68 (+3 live skip). HONESTO: o lado Authorization Server (DCR + authorization-code) que claude.ai/ChatGPT/Gemini dirigem NAO esta feito — o Supabase Auth nao e AS OAuth2 generico com DCR; rotas (AS shim / provedor com DCR / aguardar Supabase) documentadas em docs/MCP_REMOTE.md. Em todas, o nosso RS nao muda. Da p/ conectar JA com um JWT em mao (claude mcp add --header).
+
+<!-- lifeline:end -->
 
 ### #0048 — 2026-05-31T03:25:43.343560+00:00 — milestone
 
@@ -951,6 +1045,8 @@ A ultima milha do M3, na parte que da pra fechar+testar aqui. (1) SupabaseTokenV
 **Body**:
 Mesmo padrao dos #0042/#0045 (validar ao vivo, nao so mock). Com as creds do .env rodei o SupabaseTokenVerifier contra https://<proj>.supabase.co/auth/v1/user: token real -> 200 -> AccessToken com user id (escopo multi-tenant ok); 'jwt.invalido' -> 403 -> None (rejeitado). Confirma o RS de ponta a ponta. Falta so o Authorization Server (DCR/auth-code) dos conectores hospedados — decisao de arquitetura/integracao, nao codigo do nosso lado.
 
+<!-- lifeline:end -->
+
 ### #0049 — 2026-05-31T03:28:18.742815+00:00 — open
 
 - **author**: unknown
@@ -964,6 +1060,8 @@ Mesmo padrao dos #0042/#0045 (validar ao vivo, nao so mock). Com as creds do .en
 
 **Body**:
 Unica peca restante do M3. O Resource Server (validacao de JWT + multi-tenant por RLS + protected-resource metadata) esta feito e validado ao vivo (#0047/#0048) e NAO muda. Falta o AS, que os conectores dirigem sozinhos. Rotas avaliadas (decisao adiada pelo dono): (a) AS shim via OAuthAuthorizationServerProvider do SDK, ponte pro Supabase Auth — custo-zero, no repo, mas security-critical e so valida ao vivo contra o conector; (b) provedor com DCR (Auth0/WorkOS/Keycloak) emitindo o JWT que o RS ja valida — menos codigo, possivel custo. Comecar fresco quando for testar contra o claude.ai real.
+
+<!-- lifeline:end -->
 
 ### #0050 — 2026-05-31T03:47:54.458026+00:00 — fix
 
@@ -979,6 +1077,8 @@ Unica peca restante do M3. O Resource Server (validacao de JWT + multi-tenant po
 **Body**:
 Resposta acionavel a auditoria de producao. (1) README: corrigido o install quebrado (pip install -e . na raiz, nao 'v2/' que nao existe mais), badges (68 testes) e deps (httpx + extra [cloud]) — destrava onboarding. (2) cloud.py: _ensure_ok() loga+levanta em 4xx/5xx em TODOS os metodos; append passou a usar return=representation e distingue inserido(True)/duplicata(False) igual ao SQLite — falha real NUNCA mais mascarada como dedup (era o bloqueador #2/#3 do audit). Provado ao vivo: token expirado deu 401->log ERROR+HTTPStatusError, antes daria 'duplicada (idempotente)'. (3) CI: .github/workflows/ci.yml roda pytest+verify no push/PR (py3.10/3.12) — pega o drift que o audit achou (README stale, #0043 foi manual). (4) cli.py: dispatch extraido p/ _dispatch(); main() envolve em try/except -> erro de rede vira mensagem amigavel + exit 1, nao traceback (SystemExit do argparse passa intacto). (5) logging em cloud.py/mcp_server.py (o except silencioso de auth virou debug log) + teste live skip-gated de isolamento (anon nao le linhas do usuario via RLS). Suite 70/70 (+4 live skip). Pendente p/ re-validacao live funcional: refresh do SUPABASE_TOKEN (expira ~1h).
 
+<!-- lifeline:end -->
+
 ### #0051 — 2026-05-31T04:11:35.450315+00:00 — feature
 
 - **author**: unknown
@@ -992,6 +1092,8 @@ Resposta acionavel a auditoria de producao. (1) README: corrigido o install queb
 
 **Body**:
 Corretude-nucleo do local ja estava travada por teste (determinismo, anti-tamper, supersessao, round-trip ponto-fixo) — nao dupliquei. Fechei os gaps reais que faltavam pro '10 polido': (1) teste de ledger VAZIO (primeira execucao e graciosa, placeholder, sem crash); (2) teste de IDEMPOTENCIA do ingest (re-seed nao duplica — content-addressed); (3) .env.example (template do modo nuvem, sem segredo); (4) README: 'Status & roadmap' corrigido (estava stale: dizia 8 suites, M3 planejado/Redis, 'nuvem nao existe' — agora reflete M3 validado ao vivo + limites honestos) e nova secao 'Do local pra nuvem (graduacao)'; (5) gancho local->nuvem como fluxo de primeira-classe: 'lifeline --store supabase migrate --from LIFELINE.md' e LOSSLESS+IDEMPOTENTE (mesmos ids), com teste live skip-gated (test_seed_cloud_from_local_markdown). Suite 72/72 (+5 live skip). Veredito honesto: local agora ~9/10 (o '10 teorico' fica no O(n) por chamada — deliberadamente nao otimizado, trivial na escala real — e na ausencia de assinatura, fora do threat-model local).
+
+<!-- lifeline:end -->
 
 ### #0052 — 2026-06-01T12:31:04.117437+00:00 — fix
 
@@ -1007,6 +1109,8 @@ Corretude-nucleo do local ja estava travada por teste (determinismo, anti-tamper
 **Body**:
 Pesquisa fact-checked (jun/2026, fontes oficiais Anthropic/OpenAI/Google/spec MCP) sobre o que os chats exigem pra conectar MCP remoto. ACHADOS: (1) claude.ai SUPORTA conector AUTHLESS (auth='none') -> one-click sem AS, mas sem identidade por usuario (single-tenant/compartilhado, nao multi-tenant). (2) DCR NAO e obrigatorio: claude.ai aceita CIMD ou client pre-registrado (Anthropic-held creds via mcp-review@anthropic.com); ChatGPT aceita CIMD/clients predefinidos; a spec MCP diz DCR='MAY'. (3) BEARER ESTATICO NAO SERVE nos apps web (claude.ai: static_bearer 'not yet supported'; ChatGPT idem) — so funciona nos CLIs (Claude Code, Gemini CLI). Isso CORRIGE o doc, que implicava 'claude mcp add --header' pro claude.ai web. (4) ChatGPT exige Developer Mode (planos PAGOS; free nao tem). (5) Gemini consumo nascente (CLI ok; app/enterprise). (6) AS zero-custo com DCR: Cloudflare workers-oauth-provider (OSS/free Workers), Keycloak (OSS), Stytch (free ~10K MAU); Auth0 enterprise/opaco. CONCLUSAO DE NEGOCIO: o valor pago (multi-tenant nos chats) E gated por um AS, MAS nao por DCR; e da pra VALIDAR o one-click via authless (claude.ai) sem AS nenhum. A workflow de deep-research falhou (StructuredOutput), refeito via WebSearch/WebFetch direto.
 
+<!-- lifeline:end -->
+
 ### #0053 — 2026-06-01T12:37:47.725665+00:00 — feature
 
 - **author**: unknown
@@ -1020,6 +1124,8 @@ Pesquisa fact-checked (jun/2026, fontes oficiais Anthropic/OpenAI/Google/spec MC
 
 **Body**:
 Caminho (a) escolhido pelo dono: validar o one-click nos chats SEM construir AS, usando o modo authless que o claude.ai aceita (pesquisa #0052). Entregue: (1) Dockerfile — reconstroi o .db da LIFELINE.md versionada no boot e serve authless via streamable-http (/mcp), respeitando  (Render/Railway); (2) .dockerignore — NUNCA empacota .env/segredo/_legacy/cache; (3) docs/DEPLOY.md — smoke local, deploy free-tier (Railway/Render/Fly) e os cliques de registro no claude.ai (Authentication: None). Smoke real: o servidor sobe no uvicorn e fica ouvindo :8000/mcp (testado local). SEGURANCA (honesto): authless+publico = qualquer um com a URL le o contexto e pode enfileirar propostas — mitigado por HITL (escrita so PROPOE; nao corrompe a line) + usar line nao-sensivel (o demo expoe a propria LIFELINE.md, ja publica). NAO usar com dado privado — pra isso e multi-tenant+AS (#0049). O dono deploya e da o clique final no claude.ai.
+
+<!-- lifeline:end -->
 
 ### #0054 — 2026-06-01T13:53:25.599113+00:00 — fix
 
@@ -1035,6 +1141,8 @@ Caminho (a) escolhido pelo dono: validar o one-click nos chats SEM construir AS,
 **Body**:
 Achado testando o conector authless por tunel cloudflare: o FastMCP, por padrao, so confia em Host=localhost (anti-DNS-rebinding), entao rejeita com 421 qualquer requisicao cujo Host seja o dominio publico — bloqueava TODO deploy/proxy/tunel, nao so o demo. Fix: _transport_security() em mcp_server.py — LIFELINE_MCP_ALLOWED_HOSTS=host1,host2 libera esses com a protecao ON; sem a lista, desliga a protecao (servidor remoto ja e publico). _build_remote() agora SEMPRE constroi um FastMCP fresco com esse transport_security (antes o caminho authless reusava a instancia stdio sem ele). +2 testes (lista libera host / default desliga). Suite 74/74 (+5 live skip). Aprendizado: hospedar tunel efemero a partir da sessao do agente e fragil (caiu com exit 127) — o deploy/tunel deve rodar no terminal do dono p/ persistir.
 
+<!-- lifeline:end -->
+
 ### #0055 — 2026-06-01T14:23:07.609835+00:00 — feature
 
 - **author**: unknown
@@ -1048,6 +1156,8 @@ Achado testando o conector authless por tunel cloudflare: o FastMCP, por padrao,
 
 **Body**:
 Decisao do dono: Render free agora (validar, /usr/bin/bash), Railway depois (quando aprovar conexao+viabilidade). Render free usa o Dockerfile como esta, dorme apos 15 min (cold start ~1 min) e nao exige cartao. Adicionado: (1) rota GET /healthz -> 200 'ok' (registrada via _register em qualquer instancia; health check de Render/Railway + checagem no navegador; smoke local confirmou 200); (2) render.yaml (Blueprint: web/docker/free/healthCheckPath=/healthz/autoDeploy; comentario p/ promover a starter  e p/ envs OAuth multi-tenant futuras); (3) DEPLOY.md Render-first com Blueprint+manual, nota de cold-start, e a licao do tunel (rede bloqueia porta 7844 do cloudflared — deploy resolve). Suite 76/76 (+1 teste: rota /healthz registrada; +5 live skip). Conta/cliques sao do dono (nao crio conta). Ancorado #0055.
+
+<!-- lifeline:end -->
 
 ### #0056 — 2026-06-01T14:37:23.209485+00:00 — milestone
 
@@ -1063,6 +1173,8 @@ Decisao do dono: Render free agora (validar, /usr/bin/bash), Railway depois (qua
 **Body**:
 Deploy do dono no Render free (lifeline-cnah.onrender.com) via Blueprint. Verificado por mim daqui (URL HTTPS publica, sem o problema de porta 7844 do tunel): /healthz -> 200 'ok'; /mcp -> initialize 200 + handshake completo expondo TOOLS [lifeline_append, lifeline_recontextualize, lifeline_recall] e RESOURCE [lifeline://project/context]. Authless (validacao, single-tenant) servindo a propria LIFELINE.md. Cold-start ~1 min (free dorme apos 15 min). Falta o dono registrar a URL .../mcp como Custom Connector no claude.ai (Authentication: None) e sentir o valor. Proximo da viabilidade: multi-tenant via AS (#0049) + Railway/Render-paid sempre-on quando aprovar.
 
+<!-- lifeline:end -->
+
 ### #0057 — 2026-06-01T14:42:16.841419+00:00 — fix
 
 - **author**: unknown
@@ -1076,6 +1188,8 @@ Deploy do dono no Render free (lifeline-cnah.onrender.com) via Blueprint. Verifi
 
 **Body**:
 Teste ao vivo do dono: adicionar o conector authless (https://lifeline-cnah.onrender.com/mcp) no claude.ai web falhou com 'Couldn't register with sign-in service' (ofid_75cff0ea31cc4203). Diagnostico verificado daqui: o servidor authless retorna 200 no /mcp e NAO tem /.well-known/oauth-* (todos 404); mesmo assim o claude.ai WEB tenta registrar um client OAuth e, sem AS, nao consegue. A pesquisa #0052 concluiu 'authless valida no claude.ai' — CORRIGE-SE: isso vale pros CLIs (Claude Code/Gemini CLI aceitam URL/authless direto), NAO pro app web, cujo fluxo de Custom Connector forca OAuth (DCR/CIMD/client pre-registrado). Consequencia pratica: (a) validar o valor JA via Claude Code 'claude mcp add --transport http lifeline <url>/mcp' (authless ok); (b) pro claude.ai WEB, o AS (#0049) deixa de ser opcional — e o pre-requisito. Deploy em si esta 100% (healthz/mcp/tools/resource verificados).
+
+<!-- lifeline:end -->
 
 ### #0058 — 2026-06-01T14:45:45.435934+00:00 — decision
 
@@ -1091,6 +1205,8 @@ Teste ao vivo do dono: adicionar o conector authless (https://lifeline-cnah.onre
 **Body**:
 O #0040 arquivou a rev0 em _legacy/ rastreada (navegavel). Agora, mirando repo-vitrine limpo (direcao de lancamento/landing), tira-se _legacy/ (107 arquivos, 1.1M de SDK morto) da arvore versionada: git rm --cached + _legacy/ no .gitignore. NADA se perde: a rev0 continua (a) no disco local e (b) no HISTORICO do git (commits originais 37f5fd6 etc. + o rename fef0b15) — recuperavel por git log/checkout. Refina #0040 (mantem o porque/arquivamento; muda so o 'rastreado na arvore' -> 'preservado no historico'). Repo publico fica so com o produto limpo.
 
+<!-- lifeline:end -->
+
 ### #0059 — 2026-06-01T15:15:00.768245+00:00 — feature
 
 - **author**: unknown
@@ -1104,6 +1220,8 @@ O #0040 arquivou a rev0 em _legacy/ rastreada (navegavel). Agora, mirando repo-v
 
 **Body**:
 Objetivo do dono: qualquer IA que conecta (ou abre o repo) entende o uso, sabe instalar/conectar, seguir, e EXPLICAR/ORGANIZAR pro humano — sem friccao. Entregue: (1) FastMCP instructions (899 chars) nas 3 construcoes do servidor (local/remoto authless/remoto OAuth) — toda IA recebe o manual no initialize: ler o context primeiro, propor via HITL, nunca inventar (ancora), e o papel de explicar/organizar pro humano. (2) .mcp.json LIMPO — so o server  stdio (o que o instalador recebe); a entrada supabase do DEV foi pra .mcp.local.json (gitignored, nao-versionada). Corrigido bug de comentario-inline no .gitignore (pattern nao casava). (3) llms.txt na raiz — mapa AI-readable (usar/instalar/entender/nuvem, com links). (4) AGENTS.md ganhou 'instalar 1 min (faca pelo humano)' + 'explique e organize pro humano'. (5) docs/INTEGRATION.md: snippets copia-e-cola por cliente (Claude Code auto via .mcp.json; Cursor; Claude Desktop com path absoluto; Gemini CLI) + comando alinhado (lifeline-mcp). Clientes de dev conectam no OSS local; apps web exigem nuvem+OAuth (#0057). Suite 75/5-skip. Falta p/ friccao-zero total: publicar no PyPI (hoje install e git/-e) e EN p/ alcance global.
+
+<!-- lifeline:end -->
 
 ### #0060 — 2026-06-01T15:35:51.365738+00:00 — feature
 
@@ -1119,6 +1237,8 @@ Objetivo do dono: qualquer IA que conecta (ou abre o repo) entende o uso, sabe i
 **Body**:
 Prep do item 1 (publicar no PyPI) executada ate onde da sem a conta do dono. Nome lifeline-context LIVRE no PyPI. pyproject completado: license MIT, authors, keywords, classifiers (Alpha/Python 3.10-3.13/AI), project.urls (github). Versao alinhada (__init__ 0.0.1 -> 0.1.0 = pyproject). build/ e dist/ no gitignore. python -m build gerou wheel + sdist; twine check PASSED nos dois. Teste de install em venv limpa: importa, versao 0.1.0, exports ok, 3 console scripts criados (lifeline/lifeline-mcp/lifeline-mcp-remote), lifeline --help exit 0, mcp_server+cloud importam. UNICO passo restante (do dono): criar conta no pypi.org + API token + 'twine upload dist/*'. Apos publicado, install vira 'pip install lifeline-context' e os snippets de conexao funcionam em qualquer maquina.
 
+<!-- lifeline:end -->
+
 ### #0061 — 2026-06-01T15:53:47.610770+00:00 — feature
 
 - **author**: unknown
@@ -1132,6 +1252,8 @@ Prep do item 1 (publicar no PyPI) executada ate onde da sem a conta do dono. Nom
 
 **Body**:
 Dono optou pelo Trusted Publisher (OIDC) em vez de API token — mais seguro, nada de segredo pra gerenciar. Criado .github/workflows/publish.yml: dispara em release published (ou workflow_dispatch manual); permissions id-token: write (OIDC); environment pypi (casa com o formulario do PyPI); builda sdist+wheel e publica via pypa/gh-action-pypi-publish@release/v1. Formulario PyPI Trusted Publisher: projeto=lifeline-context, owner=jessianmart, repo=lifeline, workflow=publish.yml, environment=pypi. Falta do dono: (1) submeter o formulario (pending publisher cria o projeto no 1o publish), (2) criar o environment 'pypi' em Settings->Environments do repo, (3) criar um GitHub Release v0.1.0 (ou rodar o workflow manual) -> publica sozinho via OIDC. Ancorado #0061.
+
+<!-- lifeline:end -->
 
 ### #0062 — 2026-06-01T15:59:04.361457+00:00 — feature
 
@@ -1147,6 +1269,8 @@ Dono optou pelo Trusted Publisher (OIDC) em vez de API token — mais seguro, na
 **Body**:
 Alcance global pro lancamento OSS. README.md agora em EN (front door + long_description do PyPI), com seletor de idioma; o PT preservado em README.pt-BR.md. llms.txt e AGENTS.md (AI-facing) traduzidos pra EN — alinha com o 'AI-first' global. Badges de testes atualizados (75). PENDENTE (proximo passo, deep docs ainda em PT): docs/INTEGRATION.md, docs/ARCHITECTURE.md, docs/MCP_REMOTE.md, docs/DEPLOY.md, docs/M3_TIER1_SUPABASE.md, CONTRIBUTING.md, PRD.md. CLAUDE.md e LIFELINE.md ficam em PT de proposito (laws internas + line gerada = dogfood). O README EN linka esses docs PT por ora (snippets sao copia-e-cola, agnosticos de idioma).
 
+<!-- lifeline:end -->
+
 ### #0063 — 2026-06-01T16:07:36.174972+00:00 — feature
 
 - **author**: unknown
@@ -1160,6 +1284,8 @@ Alcance global pro lancamento OSS. README.md agora em EN (front door + long_desc
 
 **Body**:
 Fecha o EN do repo pro lancamento global. 7 deep docs traduzidos PT->EN (paralelizado com subagentes, glossario consistente), com fixes de staleness no caminho: CONTRIBUTING quality-gate trocado de 'pasta v2/ + loop por-arquivo' para 'python -m pytest' e a ref a _legacy ajustada (agora gitignored/no historico); PRD corrigido (id=sha256(content+parents) e arquitetura SEM Redis, alinhando #0038); comentarios PT dentro de code blocks (MCP_REMOTE, M3) passados pra EN; ARCHITECTURE ganhou as linhas de cloud.py/staging.py e a nota do MCP remoto; DEPLOY com o reality-check do #0057 (claude.ai web exige OAuth). Ficam em PT de proposito: CLAUDE.md (laws internas) e LIFELINE.md (line gerada = dogfood). README PT preservado em README.pt-BR.md. Superficie EN de lancamento completa.
+
+<!-- lifeline:end -->
 
 ### #0064 — 2026-06-01T16:25:20.421411+00:00 — fix
 
@@ -1175,6 +1301,8 @@ Fecha o EN do repo pro lancamento global. 7 deep docs traduzidos PT->EN (paralel
 **Body**:
 Diagnostico: o ci.yml fazia 'pip install -e .[cloud]' (so deps de runtime: pydantic/aiosqlite/mcp/httpx) e depois 'python -m pytest' — mas pytest NAO e dependencia do pacote, entao o step Testes falhava em todo push (vermelho desde que o CI foi adicionado, #0050). Reproduzido em venv limpa: pkg+pytest (sem pytest-asyncio) -> 75 passam (mcp 1.27.2 do PyPI tem todas as APIs usadas). Fix: (1) pyproject ganha optional-dependency dev=['pytest>=8']; (2) CI instala .[cloud,dev]; (3) step de integridade melhorado: 'lifeline migrate --from LIFELINE.md' + 'lifeline verify' (antes verificava um .db vazio -> 0 entradas trivial; agora reconstroi as 63 entradas da view versionada e verifica a cadeia REAL). Pacote em si nunca esteve quebrado (install/import/scripts provados); era so o CI sem pytest.
 
+<!-- lifeline:end -->
+
 ### #0065 — 2026-06-01T16:42:51.725619+00:00 — release
 
 - **author**: unknown
@@ -1188,6 +1316,8 @@ Diagnostico: o ci.yml fazia 'pip install -e .[cloud]' (so deps de runtime: pydan
 
 **Body**:
 Primeiro release publico. Disparado por tag v0.1.0 -> workflow publish.yml (que ganhou gatilho de tag) -> build + pypa/gh-action-pypi-publish via OIDC, SEM token (o dono submeteu o Trusted Publisher no PyPI; eu fiz todo o resto). Run: SUCCESS. Verificado ao vivo: venv limpa, 'pip install lifeline-context' (do PyPI) -> importa v0.1.0, comando 'lifeline' OK, 3 console scripts (lifeline/lifeline-mcp/lifeline-mcp-remote). Tambem: CI ficou verde (#0064, faltava pytest). Badge do PyPI adicionado aos READMEs. Impacto: o maior atrito de instalacao morreu — os snippets de conexao (Claude Code/Cursor/Gemini) agora funcionam em qualquer maquina com lifeline-mcp no PATH. Releases futuros: bump de versao + tag vX.Y.Z (ou Release) -> publica sozinho. Falta do hibrido: AS (#0049) pros conectores web.
+
+<!-- lifeline:end -->
 
 ### #0066 — 2026-06-01T17:11:57.327997+00:00 — feature
 
@@ -1203,6 +1333,8 @@ Primeiro release publico. Disparado por tag v0.1.0 -> workflow publish.yml (que 
 **Body**:
 Resposta ao audit de prontidao OSS. (1) HIGIENE: SECURITY.md (reporte via GitHub Private Vulnerability Reporting; threat-model local-trust vs cloud-RLS/HITL), CHANGELOG.md (Keep-a-Changelog, com 0.1.0 + 0.1.1), .github/ISSUE_TEMPLATE.md e PULL_REQUEST_TEMPLATE.md (PR template amarra na constituicao: pytest+verify+anexar entrada). (2) SCHEMA EMPACOTADO: cloud/schema.sql movido p/ lifeline/schema.sql (fonte unica), package-data no pyproject -> vai no wheel (confirmado), comando 'lifeline schema' (importlib.resources) imprime o SQL -> cloud-via-pip nao precisa do repo. Refs nos docs (M3/MCP_REMOTE/CONTRIBUTING) atualizadas; LIFELINE.md nao tocada (gerada/append-only, entradas antigas sao fato historico). (3) TESTES DE INTEGRACAO: TestCLIMain (main() despacha log/verify/schema + rede-de-erro -> exit 1 sem traceback) e handlers MCP de leitura (project_context/recall contra store temp). Cobertura: cli 62->70%, mcp_server 65->76%, total 80->84% (core segue 100%). Suite 78 passa / 5 skip. Bump 0.1.0->0.1.1 (0.1.0 no PyPI e imutavel; schema-no-wheel chega no 0.1.1). Veredito: OSS sobe de ~8.5 pra ~9.5; falta so o #0029 (recall denso) pro salto de produto.
 
+<!-- lifeline:end -->
+
 ### #0067 — 2026-06-01T17:18:18.046957+00:00 — release
 
 - **author**: unknown
@@ -1216,6 +1348,8 @@ Resposta ao audit de prontidao OSS. (1) HIGIENE: SECURITY.md (reporte via GitHub
 
 **Body**:
 Segundo release. Disparado por tag v0.1.1 -> publish.yml (OIDC, sem token) -> SUCCESS. Verificado: 'pip install lifeline-context==0.1.1' do PyPI funciona (apos ~1min de propagacao do indice), versao instalada 0.1.1 confirmada em venv limpa. Conteudo do 0.1.1 (gaps 1-3 do audit OSS, #0066): schema da nuvem empacotado (lifeline/schema.sql no wheel) + comando 'lifeline schema'; SECURITY.md/CHANGELOG.md/issue+PR templates; testes de integracao (main() dispatch + handlers MCP) levando cobertura 80->84% (core 100%). OSS ~9.5. Proximo: #0029 (recall semantico denso).
+
+<!-- lifeline:end -->
 
 ### #0068 — 2026-06-01T17:31:39.616445+00:00 — correction
 
@@ -1231,6 +1365,8 @@ Segundo release. Disparado por tag v0.1.1 -> publish.yml (OIDC, sem token) -> SU
 **Body**:
 Fecha o thread aberto #0029 ('plugar embedder semantico denso'). Implementado SentenceTransformerEmbedder atras do mesmo port Embedder (recall.py): lazy-import de sentence-transformers (extra [embeddings]), vetores normalizados -> similaridade = cosseno. Seletor make_embedder() le LIFELINE_EMBEDDER (default/'lexical' -> LexicalEmbedder zero-dep; 'dense' -> ST modelo default; outro valor -> nome de modelo). Wirado no cmd_context (--query) e no lifeline_recall do MCP. DEFAULT segue LEXICAL (zero friccao, zero dep) — o denso e OPT-IN. Testes: factory (default/dense/env), wiring com modelo fake (sem baixar), recall ranqueando por SIGNIFICADO via o port, erro claro sem o extra, e teste real skip-gated (related>unrelated) — suite 84 passa/6 skip. Docs (README/ARCHITECTURE) e CHANGELOG atualizados; bump 0.2.0. Era a unica lacuna de PRODUTO do audit — agora o recall casa por significado, nao so por palavra.
 
+<!-- lifeline:end -->
+
 ### #0069 — 2026-06-01T17:37:13.577521+00:00 — release
 
 - **author**: unknown
@@ -1244,6 +1380,8 @@ Fecha o thread aberto #0029 ('plugar embedder semantico denso'). Implementado Se
 
 **Body**:
 Terceiro release. Tag v0.2.0 -> publish.yml (OIDC) -> SUCCESS. Verificado: pip install lifeline-context==0.2.0 do PyPI OK, versao 0.2.0, e a API do #0029 embarca (from lifeline import make_embedder, SentenceTransformerEmbedder; make_embedder() default = LexicalEmbedder). #0029 fechado na line (#0068). Estado: OSS ~9.5-10 (core 100%, integracao 84%, PyPI, docs bilingues, higiene completa, AI-first, recall semantico opt-in). Unico item aberto: #0049 (Authorization Server) — peca do cloud pago/conector web, nao qualidade do OSS.
+
+<!-- lifeline:end -->
 
 ### #0070 — 2026-06-01T21:24:06.692912+00:00 — feature
 
@@ -1259,6 +1397,8 @@ Terceiro release. Tag v0.2.0 -> publish.yml (OIDC) -> SUCCESS. Verificado: pip i
 **Body**:
 PORQUE: o cold-start e o gargalo de ativacao nº1 — quase ninguem adota o Lifeline desde o #0001; o caso dominante e instalar no MEIO do projeto, e ai a line comeca VAZIA. O Lifeline registra o porque PARA FRENTE; nao reconstroi o passado do codigo/git (non-goal). Sem onboarding, o primeiro connect mostra contexto vazio e a pessoa churna antes do valor (o pitch e TTC->0, entao um connect vazio e um problema existencial de ativacao). O QUE: (1) context.py — quando a line nao tem identidade nem decisoes, o contexto montado lidera com um CTA de bootstrap (o gatilho que a IA le no connect); (2) _INSTRUCTIONS do MCP — a IA que conecta a uma line vazia sabe se oferecer pra fazer o checkpoint; (3) novo comando 'lifeline init' (ativacao CLI-first) que inicializa a line e imprime o protocolo. DESIGN (validado com o humano): nao e input unico — e rascunho a partir dos artefatos de raciocinio JA escritos (README/ADR/PR) + entrevista curta (3-7 perguntas do porque tacito) -> entradas GRANULARES (1 bootstrap + N decision + M open, cada uma superseivel depois) -> aprovacao em lote. GUARDRAILS (respeitam a constituicao): tudo entra como PROPOSTA HITL (anti-sujeira); o porque NUNCA e inferido do codigo/diff (so de artefatos de raciocinio humanos) senao fura as Leis #1 (ancora) e #5 (porque>quê). A fundacao HITL (propose/review/approve) ja existia — o delta foi so gatilho+orquestracao. 6 testes novos (context vazio mostra CTA / populado nao mostra / nota solta ainda conta como vazia; init nos dois estados; _INSTRUCTIONS cobre bootstrap). Suite 90 passed/6 skipped. Decisao de sequencia: anuncio da 0.2.0 fica DEPOIS deste fix — sem ativacao, o anuncio so gera instalacoes que esfriam.
 
+<!-- lifeline:end -->
+
 ### #0071 — 2026-06-01T21:46:39.883298+00:00 — feature
 
 - **author**: unknown
@@ -1273,6 +1413,8 @@ PORQUE: o cold-start e o gargalo de ativacao nº1 — quase ninguem adota o Life
 **Body**:
 PORQUE: lancamento precisa de uma porta de entrada que (a) comunique a tese em segundos e (b) seja achavel/citavel por IAs — coerente com o produto ser AI-first. DESIGN: hiperminimal, estetica Linear (Inter, dark, hairlines, acento indigo); a 'lifeline' corre na HORIZONTAL (o DAG do ledger) e o scroll vertical do mouse a percorre — cada secao e um 'no' com chip de hash, ecoando os ids reais. Progressive enhancement: o conteudo e HTML semantico real (renderiza e e crawlavel SEM JS); no mobile empilha vertical. GEO (o diferencial pedido): JSON-LD (SoftwareApplication + SoftwareSourceCode + FAQPage + TechArticle por doc), llms.txt + llms-full.txt, robots.txt convidando GPTBot/ClaudeBot/PerplexityBot/Google-Extended explicitamente, sitemap.xml, OpenGraph, canonical. ARQUITETURA (decidido com o humano): hibrido — landing horizontal + paginas de doc HTML reais (melhor extracao por IA); ingles (alcance global). As docs sao GERADAS do markdown do repo por site/build.py (saida commitada, zero dep no deploy), entao editar docs/ATUALIZA o site. Deploy por .github/workflows/pages.yml (Pages via Actions). Validado ao vivo: geometria computada confere (grid 1180px, 3 cards 381px, centralizacao vertical, dots na borda, thread no centro). FALTA 1 passo manual do humano: habilitar Pages (Settings -> Pages -> Source: GitHub Actions). Sequencia: site primeiro, anuncio da 0.2.0 quando o site estiver no ar.
 
+<!-- lifeline:end -->
+
 ### #0072 — 2026-06-01T22:01:46.517578+00:00 — fix
 
 - **author**: unknown
@@ -1286,3 +1428,69 @@ PORQUE: lancamento precisa de uma porta de entrada que (a) comunique a tese em s
 
 **Body**:
 SINTOMA: no site publicado, o scroll vertical do mouse nao rolava a tela na horizontal (parecia congelado). CAUSA (confirmada via DOM ao vivo): 'scroll-snap-type: x mandatory' no .track reverte QUALQUER scrollLeft fora de um ponto de snap — cada incremento do wheel (~320px) e menor que um painel (1440px), entao o mandatory puxava de volta ao painel atual (setar scrollLeft=600 voltava a 0 instantaneamente). 'proximity' tem uma versao branda do mesmo bug: partindo de um painel, um tick fica 'perto demais' e e revertido (scroll partindo de 0 dava [0,0,0,0]). FIX: scroll-snap-type:none (zero snap nativo brigando) + snap-on-idle controlado em JS (scheduleSnap: 140ms depois que o wheel para, scrollTo smooth ao painel mais proximo). Acumulacao livre confirmada ([320,640,960,1280,1600] partindo do zero); o snap-on-idle anima em browser real (em headless o smooth nao progride, mas o instantaneo funciona). Tambem subi o multiplicador do wheel 1.15->1.6 pro percurso ficar mais agil.
+
+<!-- lifeline:end -->
+
+### #0073 — 2026-06-10T11:28:01.768552+00:00 — fix
+
+- **author**: claude
+- **agent**: claude-code
+- **provider**: anthropic
+- **model**: claude-fable-5
+- **kind**: fix
+- **summary**: Auditoria de gaps: fecha 9 falhas CALADAS (anti-teatro) com teste de regressao por gap
+- **parents**: 7e4d933e47414c6d731e8b20c8b44b5c1b0944b52fa213ee331d74775786ab74
+- **id**: 60c139da8e11208d3221d780c54be0fa8b270ba2353183d050373f0801fb901a
+
+**Body**:
+Uma auditoria forense (criterio: o erro que so se percebe tarde, em silencio) achou e REPRODUZIU nove gaps; cada um agora falha alto e tem teste em tests/test_gaps.py. (G1, critico) a superficie MCP so entregava ids truncadas (recall id[:12], context id[:8]) e a correcao exigia id inteira sem validar -> supersessao virava no-op silencioso; resolve_parents() expande prefixo / recusa orfao/ambiguo no log e no approve. (G2) recall e a secao Relevante serviam decisao revertida como viva -> agora marcam [REVERTIDO] via o conjunto superseded. (G3) leitura nunca verificava a ancora (Lei #1 so por verify offline) -> reduce() verifica e DESCARTA conteudo adulterado, o assembler avisa. (G4) verify nao via OMISSAO (pai fantasma) e a reducao confiava so em seq -> verify checa fecho referencial; decisao reordenada apos sua correcao segue superseded. (G8) superseded era monotonico -> agora derivado do grafo de correcoes por ponto-fixo: reverter a reversao restaura o original. (G5) o corte s>0.0 so abstinha no lexical -> piso min_score por embedder (denso default 0.3). (G6) body com '### #' ou terminando em '---' corrompia no clone/pull -> sentinela BODY_END torna o round-trip lossless (provado nas 72 entradas reais). (G7) approve marcava 'approved' mesmo em dedup -> honra o retorno do append (status 'duplicate'). (G10, fronteira) body cercado como citacao no payload (injecao nao se passa por estrutura; HITL e a defesa final). (G9) ts fora do hash e LIMITE declarado (determinismo, Lei #3), nao gap a consertar.
+
+<!-- lifeline:end -->
+
+### #0074 — 2026-06-10T11:28:19.704561+00:00 — feature
+
+- **author**: claude
+- **agent**: claude-code
+- **provider**: anthropic
+- **model**: claude-fable-5
+- **kind**: feature
+- **summary**: Authorization Server OAuth 2.1 (DCR + authorization-code/PKCE) delegando login ao Supabase
+- **parents**: 60c139da8e11208d3221d780c54be0fa8b270ba2353183d050373f0801fb901a
+- **id**: e7c7bb0f39ce2cf9fe0a8c48351a51ba44af22e8ed6fa403c9c7724747c22345
+
+**Body**:
+Fecha o pre-requisito dos conectores hospedados (claude.ai/ChatGPT/Gemini), que exigem um AS COMPLETO: DCR (RFC 7591) + authorization-code com PKCE S256 + metadata (RFC 8414). O Supabase Auth e um IdP, NAO um AS OAuth generico com DCR — entao o AS mora em lifeline/oauth.py (SupabaseAuthServer, implementa OAuthAuthorizationServerProvider do SDK MCP) e DELEGA a autenticacao do usuario ao Supabase. Fluxo: /register (DCR) -> /authorize guarda params sob ticket e manda ao /oauth/login -> o login entrega email+senha ao Supabase (grant_type=password; nos NUNCA guardamos a senha, so repassamos sobre TLS) e cunha NOSSO code -> /token troca o code (PKCE verificado pelo SDK) pelo access_token = o JWT do Supabase, que o Resource Server ja valida por requisicao (escopa a RLS por usuario). Refresh e revoke batem no Supabase. Liga com LIFELINE_OAUTH_AS=1 (implica o RS); LIFELINE_OAUTH=1 segue sendo so o RS. 13 testes (test_oauth.py) provam DCR, authorize->login->code, troca one-time, code ligado ao client, expiracao, refresh, introspeccao e revoke, com o Supabase mockado (wire, nao live). LIMITES declarados (honestidade #0046/#0047): grant de senha (nosso server ve a senha em transito) e o minimo testavel — hardening = redirect ao login hospedado do Supabase, sem mudar o AS; clients/codes em memoria (correto p/ instancia unica; tabela lifeline_oauth_clients ja no schema p/ escalar).
+
+<!-- lifeline:end -->
+
+### #0075 — 2026-06-10T11:31:27.084141+00:00 — correction
+
+- **author**: claude
+- **agent**: claude-code
+- **provider**: anthropic
+- **model**: claude-fable-5
+- **kind**: correction
+- **summary**: Fecha a thread: o Authorization Server (DCR + auth-code/PKCE) foi entregue (#0074)
+- **parents**: 32d96c3d0364ad868c6df14bbfa73203f7472778c4894f3223a307bee4b92cfb
+- **id**: b8bc96694d5317266e2d5a81c3ebb2ff32232b1872d0880173e86406c61b3a81
+
+**Body**:
+O open item #32d96c3d (proximo: OAuth Authorization Server p/ plugar nos conectores hospedados) esta CUMPRIDO pela feature #0074 (lifeline/oauth.py + LIFELINE_OAUTH_AS=1, 13 testes). Supersede o open para sair de 'em aberto'. Proximo natural, se desejado: trocar o grant de senha pelo login HOSPEDADO do Supabase (SSO) e persistir os clients DCR na tabela lifeline_oauth_clients para deploy multi-instancia — ambos sem mexer no AS.
+
+<!-- lifeline:end -->
+
+### #0076 — 2026-06-10T11:58:18.586144+00:00 — feature
+
+- **author**: claude
+- **agent**: claude-code
+- **provider**: anthropic
+- **model**: claude-fable-5
+- **kind**: feature
+- **summary**: AS: sign-up inline (Supabase) + teste e2e do baile OAuth completo pelas rotas HTTP reais
+- **parents**: b8bc96694d5317266e2d5a81c3ebb2ff32232b1872d0880173e86406c61b3a81
+- **id**: be30eeec3a86ae2c5098b639ed8207e28859a5131d204299abcd5d9eb4336e15
+
+**Body**:
+Preparando o teste hospedado multi-tenant (claude.ai), fechei o gap que travaria o 1o usuario: o form /oauth/login so fazia login (password grant), nao CRIAVA conta — quem conectasse sem conta Supabase ficava preso. Adicionado /auth/v1/signup com checkbox 'Criar conta': auto-confirm -> loga inline e cunha o code; confirmacao-por-email -> mensagem clara (nao da pra completar inline); conta existente/erro -> mensagem. E adicionado o teste mais valioso do AS: TestEndToEndASGI dirige o baile INTEIRO pelas rotas HTTP reais (DCR /register -> /authorize 302 -> /oauth/login 302 -> /token 200) com PKCE S256 verificado pelo SDK e o Supabase mockado — o mais perto do handshake do claude.ai sem conector ao vivo; + caso negativo (PKCE errado -> invalid_grant). Discovery validado RFC-compliant (protected-resource aponta authorization_servers ao nosso AS; AS anuncia authorize/token/register + S256). 124 testes verdes. Limite ainda aberto e declarado: o handshake com o claude.ai REAL nunca rodou (so mock); e clients DCR seguem em memoria (ok p/ instancia unica).
+
+<!-- lifeline:end -->

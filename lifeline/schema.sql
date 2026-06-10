@@ -79,3 +79,20 @@ create policy "lifeline_prop_update" on lifeline_proposals
 
 -- (Futuro M4 / hub: policies de compartilhamento por line — uma tabela de membros por line
 -- e uma policy que libera SELECT a membros. Fora do escopo do Tier 1.)
+
+
+-- ============================================================================
+-- Authorization Server (open item #32d96c3d): persistência dos clients DCR.
+-- O AS (lifeline/oauth.py) roda EM MEMÓRIA por padrão (correto p/ instância única). Para
+-- multi-instância (deploy escalado), aponte um client store a esta tabela: os clients
+-- registrados via DCR sobrevivem a restart e são compartilhados entre réplicas. Codes são
+-- one-time/efêmeros (TTL ~300s) e NÃO se persistem aqui de propósito.
+-- NÃO é multi-tenant por auth.uid(): o registro de client ocorre ANTES do login do usuário,
+-- então o gateway usa a chave do serviço; trate como infraestrutura do AS, não dado de tenant.
+-- ============================================================================
+create table if not exists lifeline_oauth_clients (
+  client_id    text primary key,
+  client_info  jsonb not null,                            -- OAuthClientInformationFull (DCR)
+  created_at   timestamptz not null default now()
+);
+-- Sem RLS de tenant aqui (registro é pré-login). Proteja por service-role/network, não por uid.

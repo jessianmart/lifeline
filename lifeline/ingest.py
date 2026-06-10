@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from lifeline.entry import Entry
+from lifeline.projection import BODY_END
 from lifeline.store import EventStore
 
 
@@ -24,10 +25,24 @@ def _parse_ts(s: str):
         return None
 
 
+def _blocks(text: str) -> List[str]:
+    """Fatia o markdown em blocos-de-entrada. Formato NOVO (com a sentinela BODY_END): corta
+    por ela — robusto a `### #`/`---` DENTRO do body (gap #G6). Formato LEGADO (sem sentinela):
+    cai no fatiamento por `^### #` (compatível com markdowns antigas)."""
+    if BODY_END in text:
+        out = []
+        for seg in text.split(BODY_END):
+            i = seg.find("### #")
+            if i != -1:
+                out.append(seg[i:])
+        return out
+    return ["### #" + part for part in re.split(r"(?m)^### #", text)[1:]]
+
+
 def parse_markdown(text: str) -> List[Dict]:
+    legacy = BODY_END not in text
     out = []
-    for part in re.split(r"(?m)^### #", text)[1:]:
-        block = "### #" + part
+    for block in _blocks(text):
         header = re.match(r"### #(\d+)\s+—\s+(\S+)\s+—\s+(\w+)", block)
         if not header:
             continue
@@ -37,7 +52,15 @@ def parse_markdown(text: str) -> List[Dict]:
             return m.group(1).strip() if m else ""
 
         bm = re.search(r"\*\*Body\*\*:\s*\n(.*)", block, re.S)
-        body = re.sub(r"\n*---\s*$", "", bm.group(1)).strip() if bm else ""
+        # Formato novo: o corpo é tudo até a sentinela (já removida pelo split) → só .strip()
+        # (que casa com o `body.strip()` do hash, Lei #3). Legado: mantém o antigo corte de `---`.
+        if bm:
+            body = bm.group(1)
+            if legacy:
+                body = re.sub(r"\n*---\s*$", "", body)
+            body = body.strip()
+        else:
+            body = ""
 
         parents_raw = field("parents")
         parents = ([] if parents_raw in ("", "—", "-")

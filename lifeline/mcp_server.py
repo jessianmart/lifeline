@@ -137,14 +137,18 @@ async def lifeline_recontextualize(parent_id: str, summary: str, body: str = "",
 
 async def lifeline_recall(query: str, k: int = 5) -> str:
     """Recupera as entradas mais RELEVANTES à tarefa atual (Camada 3 — ancoradas).
-    Use para "já decidimos algo sobre X?" sem ler o ledger inteiro. Relevância, não recência."""
+    Use para "já decidimos algo sobre X?" sem ler o ledger inteiro. Relevância, não recência.
+    Hits REVERTIDOS/fechados vêm marcados [REVERTIDO] (gap #G2) — não aja sobre verdade morta."""
     from lifeline.recall import SemanticRecall, make_embedder
+    from lifeline.state import StateEngine
     store = await _open_request()
-    hits = await SemanticRecall(store, make_embedder()).search(query, k=k)
+    superseded = set((await StateEngine(store).reduce()).get("superseded", []))
+    hits = await SemanticRecall(store, make_embedder()).search(query, k=k, superseded=superseded)
     if not hits:
         return "Nada relevante encontrado no ledger."
     return "\n".join(
-        f"[{h['kind']}] {h['summary']} (id={h['id'][:12]}, score={h['score']})" for h in hits
+        f"[{h['kind']}]{' [REVERTIDO]' if h.get('superseded') else ''} {h['summary']} "
+        f"(id={h['id'][:12]}, score={h['score']})" for h in hits
     )
 
 
@@ -208,21 +212,45 @@ def _transport_security() -> TransportSecuritySettings:
 
 
 def _build_remote() -> FastMCP:
-    """Servidor remoto. Com LIFELINE_OAUTH=1 (+ supabase + creds) vira Resource Server OAuth:
-    exige Bearer válido e escopa por usuário. Senão, serve sem auth (single-tenant via env).
+    """Servidor remoto. Três modos, por env (do mais completo ao mais simples):
+
+      - LIFELINE_OAUTH_AS=1  → Authorization Server COMPLETO (open item #32d96c3d): DCR +
+        authorization-code/PKCE + metadata, delegando login ao Supabase. É o que os
+        conectores hospedados (claude.ai/ChatGPT/Gemini) exigem. Implica Resource Server.
+      - LIFELINE_OAUTH=1     → Resource Server só (valida Bearer, multi-tenant via RLS). Útil
+        quando um AS externo já emite os tokens.
+      - (nenhum)            → sem auth (single-tenant via env).
+
     Sempre com transport_security que aceita o host público (túnel/proxy/deploy)."""
     ts = _transport_security()
-    oauth = os.environ.get("LIFELINE_OAUTH") == "1"
-    if oauth and _STORE["kind"] == "supabase" and os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY"):
+    have_supa = (_STORE["kind"] == "supabase"
+                 and os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY"))
+    port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
+    public = os.environ.get("LIFELINE_MCP_PUBLIC_URL", f"http://localhost:{port}")
+
+    if os.environ.get("LIFELINE_OAUTH_AS") == "1" and have_supa:
+        from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions
+        from lifeline.oauth import SupabaseAuthServer
+        provider = SupabaseAuthServer(
+            supabase_url=os.environ["SUPABASE_URL"], supabase_key=os.environ["SUPABASE_KEY"],
+            public_url=public)
+        server = _register(FastMCP(
+            "Lifeline", instructions=_INSTRUCTIONS,
+            auth_server_provider=provider,            # provê DCR/authorize/token/metadata + introspecção
+            auth=AuthSettings(issuer_url=public, resource_server_url=public, required_scopes=[],
+                              client_registration_options=ClientRegistrationOptions(enabled=True)),
+            transport_security=ts))
+        provider.register_login_routes(server)        # /oauth/login (delega ao Supabase)
+        return server
+
+    if os.environ.get("LIFELINE_OAUTH") == "1" and have_supa:
         from mcp.server.auth.settings import AuthSettings
         issuer = os.environ.get("LIFELINE_OAUTH_ISSUER",
                                 f"{os.environ['SUPABASE_URL'].rstrip('/')}/auth/v1")
-        port = int(os.environ.get("LIFELINE_MCP_PORT", "8000"))
-        resource = os.environ.get("LIFELINE_MCP_PUBLIC_URL", f"http://localhost:{port}")
         return _register(FastMCP(
             "Lifeline", instructions=_INSTRUCTIONS,
             token_verifier=SupabaseTokenVerifier(),
-            auth=AuthSettings(issuer_url=issuer, resource_server_url=resource, required_scopes=[]),
+            auth=AuthSettings(issuer_url=issuer, resource_server_url=public, required_scopes=[]),
             transport_security=ts,
         ))
     return _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS, transport_security=ts))

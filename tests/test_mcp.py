@@ -66,7 +66,7 @@ class TestMCPBackendAndHITL(unittest.IsolatedAsyncioTestCase):
         msg = await srv.lifeline_append("decision", "usar gRPC", "porque escala")
         self.assertIn("PENDENTE", msg)
         self.assertEqual(len(await cli.cmd_review(db)), 1)   # entrou na fila…
-        _, n = await cli.cmd_verify(db)
+        _, n, _t, _d = await cli.cmd_verify(db)
         self.assertEqual(n, 0)                                # …e NÃO na line (0 entradas seladas)
 
     async def test_handlers_read_the_line(self):

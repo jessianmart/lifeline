@@ -125,3 +125,32 @@ class SQLiteEventStore(EventStore):
             "SELECT e.payload FROM edges g JOIN entries e ON g.child_id = e.id "
             "WHERE g.parent_id = ?", entry_id,
         )
+
+
+async def resolve_parents(store: "EventStore", parents: List[str]) -> List[str]:
+    """Expande prefixos de id para ids COMPLETAS existentes no store (gap #G1).
+
+    A superfície MCP só entrega ids truncadas (`recall`→id[:12], `context`→id[:8]); uma
+    correção/decisão que referencie um prefixo precisa virar a id inteira ANTES do selo
+    (o id de uma Entry depende dos `parents` — Lei #3), senão a supersessão é um no-op
+    silencioso. Recusa prefixo órfão (0 match) ou ambíguo (>1) — falha barulhenta, não calada.
+    """
+    if not parents:
+        return parents
+    known = [e.id async for e in store.stream()]
+    known_set = set(known)
+    resolved: List[str] = []
+    for p in parents:
+        if p in known_set:                       # já é id completa
+            resolved.append(p)
+            continue
+        matches = [k for k in known if k.startswith(p)]
+        if len(matches) == 1:
+            resolved.append(matches[0])
+        elif not matches:
+            raise ValueError(f"parent inexistente: '{p[:12]}…' — nenhuma entrada casa "
+                             "(prefixo errado ou entrada não existe nesta line).")
+        else:
+            raise ValueError(f"parent ambíguo: '{p[:12]}…' casa com {len(matches)} entradas; "
+                             "use mais caracteres do id.")
+    return resolved

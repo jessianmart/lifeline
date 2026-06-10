@@ -36,8 +36,10 @@ class TestHITLFlow(unittest.IsolatedAsyncioTestCase):
     async def test_approve_seals_into_line(self):
         await cmd_propose(self.db, "decision", "A", "porque A", "ia", "x", "p", "m", None)
         await cmd_propose(self.db, "note", "B", "porque B", "ia", "x", "p", "m", None)
-        approved, n = await cmd_approve(self.db, self.out, ["all"])
+        approved, n, duplicates, errors = await cmd_approve(self.db, self.out, ["all"])
         self.assertEqual(approved, 2)
+        self.assertEqual(duplicates, 0)
+        self.assertEqual(errors, [])
         self.assertEqual(await self._ledger_count(), 2)        # agora estão na line
         self.assertEqual(await cmd_review(self.db), [])         # nada mais pendente
         self.assertTrue(os.path.exists(self.out))               # view regenerada

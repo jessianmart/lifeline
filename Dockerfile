@@ -4,7 +4,7 @@
 FROM python:3.12-slim
 WORKDIR /app
 COPY . .
-RUN pip install --no-cache-dir -e ".[cloud]"
+RUN pip install --no-cache-dir -e ".[cloud,remote]"  # remote = python-multipart (AS OAuth: /oauth/login e /token)
 
 ENV LIFELINE_MCP_TRANSPORT=streamable-http \
     LIFELINE_MCP_HOST=0.0.0.0 \

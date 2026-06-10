@@ -10,6 +10,13 @@ from typing import List
 from lifeline.entry import Entry
 from lifeline.store import EventStore
 
+# Sentinela de FIM de entrada (gap #G6). O ingester fatiava por `^### #`, então um body que
+# CITASSE uma entrada (`### #0002 — …`) ou terminasse em `---` era cortado e seu id mudava no
+# clone/pull — round-trip não-lossless, quebrando o content-addressing de que tudo depende. Um
+# comentário HTML é invisível no markdown renderizado (diffável) e dá um limite inequívoco: o
+# corpo é tudo entre `**Body**:` e a sentinela, recuperado byte-a-byte.
+BODY_END = "<!-- lifeline:end -->"
+
 
 def render_entry(n: int, e: Entry) -> str:
     parents = ", ".join(e.parents) if e.parents else "—"
@@ -23,7 +30,7 @@ def render_entry(n: int, e: Entry) -> str:
         f"- **summary**: {e.summary}\n"
         f"- **parents**: {parents}\n"
         f"- **id**: {e.id}\n\n"
-        f"**Body**:\n{e.body}\n"
+        f"**Body**:\n{e.body}\n\n{BODY_END}\n"
     )
 
 

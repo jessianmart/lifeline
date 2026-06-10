@@ -48,9 +48,11 @@ class TestCLI(unittest.IsolatedAsyncioTestCase):
     async def test_verify_passes(self):
         await self._log(kind="bootstrap", summary="X")
         await self._log(kind="decision", summary="Y")
-        ok, n = await cmd_verify(self.db)
+        ok, n, tampered, dangling = await cmd_verify(self.db)
         self.assertTrue(ok)
         self.assertEqual(n, 2)
+        self.assertEqual(tampered, [])
+        self.assertEqual(dangling, [])
 
     async def test_rebuild_is_stable(self):
         await self._log(kind="bootstrap", summary="X")

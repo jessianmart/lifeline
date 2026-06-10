@@ -65,6 +65,45 @@ accept a token by header — e.g.: `claude mcp add --transport http lifeline htt
 ⚠️ **claude.ai web and ChatGPT do NOT accept a static Bearer** (`static_bearer` not supported);
 on the hosted apps it's **authless** or **OAuth** — see below.
 
+## OAuth Authorization Server (full, DCR + PKCE) — `LIFELINE_OAUTH_AS=1`
+
+The hosted connectors (claude.ai / ChatGPT / Gemini) want a **complete Authorization Server**:
+Dynamic Client Registration (RFC 7591) + authorization-code with **PKCE (S256)** + discovery
+metadata (RFC 8414). Supabase Auth (GoTrue) is an **IdP, not** a generic OAuth AS with DCR — so
+the AS lives in Lifeline (`lifeline/oauth.py`) and **delegates user login to Supabase**.
+
+```bash
+export LIFELINE_OAUTH_AS=1 LIFELINE_STORE=supabase
+export SUPABASE_URL=… SUPABASE_KEY=<apikey>
+export LIFELINE_MCP_PUBLIC_URL=https://your-host   # we are the issuer → goes into the AS metadata
+pip install 'lifeline-context[cloud,remote]'        # remote = python-multipart (form parsing)
+lifeline-mcp-remote
+```
+
+Flow (each step is one browser round-trip):
+
+1. `POST /register` — the connector registers itself (DCR). *(SDK route)*
+2. `GET /authorize` — we stash the params (PKCE challenge, redirect, state, scopes) under an opaque
+   `ticket` and send the browser to **our** `/oauth/login`. *(SDK route)*
+3. `GET/POST /oauth/login` — a minimal form; the POST hands email+password to Supabase
+   (`grant_type=password`). **We never store/validate the password — Supabase does**; we only relay
+   it over TLS. Success → we mint **our** authorization code (bound to the Supabase session) and
+   redirect to the connector's `redirect_uri` with `code`+`state`. *(our route)*
+4. `POST /token` — the SDK verifies the **PKCE verifier (S256)** and the redirect; we swap the code
+   for `access_token = the Supabase JWT`, which the Resource Server already validates per request
+   (scoping the RLS by user). Refresh and revoke also hit Supabase. *(SDK route)*
+
+Discovery: `GET /.well-known/oauth-authorization-server` advertises our `/authorize`, `/token`,
+`/register`. `LIFELINE_OAUTH_AS` implies the Resource Server (token introspection via the provider).
+
+**Declared limits (honest):**
+- **Password grant (ROPC):** our server sees the password in transit. It's the minimal flow that's
+  testable and needs zero dashboard config. **Production hardening:** swap step 3 for a redirect to
+  Supabase's **hosted** login (SSO/social, GoTrue PKCE) — the AS here doesn't change, only step 3.
+- **Client/code storage is in-memory:** correct for a **single instance** (the current deploy). Codes
+  are one-time and expire (~300s). Multi-instance needs a shared client store — the
+  `lifeline_oauth_clients` table is in `schema.sql` for when you scale; point a client store at it.
+
 ## Connecting on the web apps (claude.ai / ChatGPT) — what the research confirmed (Jun/2026)
 
 - **claude.ai accepts an AUTHLESS connector** (`auth: "none"`) → "connect in one click" with **no
