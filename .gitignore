@@ -8,6 +8,10 @@
 # segredos — NUNCA versionar (keys do Supabase etc.)
 .env
 *.env
+
+# linha(s) PRIVADA(S) do Lifeline — estratégia/negócio. A LIFELINE.md principal (engenharia)
+# é versionada; ESTA fica fora de qualquer repo, público ou não. O .db já é ignorado (.lifeline/).
+LIFELINE.strategy.md
 # config MCP pessoal do dev (supabase etc.) — fora do repo
 .mcp.local.json
 
