@@ -179,6 +179,18 @@ class TestOAuthResourceServer(unittest.IsolatedAsyncioTestCase):
         self.assertIn("x.trycloudflare.com", ts.allowed_hosts)
         self.assertIn("meu.app:*", ts.allowed_hosts)
 
+    def test_transport_security_strips_scheme_from_host(self):
+        # erro comum: colar ALLOWED_HOSTS com https:// → sem normalizar, o Host header não casa (421)
+        with mock.patch.dict(os.environ, {"LIFELINE_MCP_ALLOWED_HOSTS": "https://app.onrender.com/"}):
+            ts = srv._transport_security()
+        self.assertIn("app.onrender.com", ts.allowed_hosts)            # host puro extraído
+        self.assertNotIn("https://app.onrender.com", ts.allowed_hosts)  # esquema removido
+
+    def test_transport_security_derives_host_from_render_env(self):
+        with mock.patch.dict(os.environ, {"RENDER_EXTERNAL_HOSTNAME": "lifeline-cnah.onrender.com"}, clear=True):
+            ts = srv._transport_security()
+        self.assertIn("lifeline-cnah.onrender.com", ts.allowed_hosts)   # Render injeta sozinho
+
     def test_transport_security_default_disables_protection(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             ts = srv._transport_security()

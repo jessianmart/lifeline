@@ -236,6 +236,16 @@ class SupabaseJWKSVerifier(TokenVerifier):
                            scopes=["lifeline"], expires_at=claims.get("exp"))
 
 
+def _host_only(value: str) -> str:
+    """Extrai só o host[:porta]. Tolera URL colada com https:// e barra final (erro comum no
+    dashboard): ALLOWED_HOSTS precisa do host PURO — com esquema, o Host header não casa → 421."""
+    value = value.strip().rstrip("/")
+    if "://" in value:
+        from urllib.parse import urlparse
+        value = urlparse(value).netloc
+    return value
+
+
 def _transport_security() -> TransportSecuritySettings:
     """Atrás de túnel/proxy/deploy o Host header é o domínio público — o default localhost-only
     do FastMCP bloqueia com 421 'Invalid Host header'. `LIFELINE_MCP_ALLOWED_HOSTS=host1,host2`
@@ -247,7 +257,9 @@ def _transport_security() -> TransportSecuritySettings:
     if hosts:
         allow = []
         for h in (x.strip() for x in hosts.split(",") if x.strip()):
-            allow += [h, f"{h}:*"]
+            h = _host_only(h)   # tolera URL colada com https:// (erro comum) → host puro, senão 421
+            if h:
+                allow += [h, f"{h}:*"]
         return TransportSecuritySettings(allowed_hosts=allow)
     return TransportSecuritySettings(enable_dns_rebinding_protection=False)
 
