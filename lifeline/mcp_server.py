@@ -26,11 +26,22 @@ import httpx
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import Icon
 
 from lifeline.cli import _STORE, _open, _staging, _validate
 
 _DB = os.environ.get("LIFELINE_DB", os.path.join(".lifeline", "ledger.db"))
 _AUTHOR = os.environ.get("LIFELINE_AUTHOR", "mcp")
+
+# Branding advertised in the `initialize` serverInfo (SEP-973): clients that support server icons
+# render the Lifeline mark next to the connector. URLs are PUBLIC (the site) — PNG preferred + SVG.
+# (Some hosts, incl. claude.ai today, still show a generic icon — that's a client-side gap, not ours.)
+_WEBSITE = "https://lifelinecontext.com"
+_ICONS = [
+    Icon(src="https://lifelinecontext.com/assets/logo/lifeline-tile-512.png", mimeType="image/png", sizes=["512x512"]),
+    Icon(src="https://lifelinecontext.com/assets/logo/lifeline-tile-1024.png", mimeType="image/png", sizes=["1024x1024"]),
+    Icon(src="https://lifelinecontext.com/assets/favicon.svg", mimeType="image/svg+xml", sizes=["any"]),
+]
 
 # Manual de uso entregue a TODA IA que conecta (FastMCP envia no initialize). AI-first: a IA
 # se onboarda sozinha, segue o loop, e sabe explicar/organizar pro humano.
@@ -201,7 +212,7 @@ def _register(server: FastMCP) -> FastMCP:
 
 
 # instância default (local/stdio e testes) — sem auth
-mcp = _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS))
+mcp = _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS, icons=_ICONS, website_url=_WEBSITE))
 
 
 # ---- OAuth Resource Server (multi-tenant) -------------------------------------------------
@@ -343,7 +354,7 @@ def _build_remote() -> FastMCP:
             supabase_url=os.environ["SUPABASE_URL"], supabase_key=os.environ["SUPABASE_KEY"],
             public_url=public, login_provider=login_provider, client_store=client_store)
         server = _register(FastMCP(
-            "Lifeline", instructions=_INSTRUCTIONS,
+            "Lifeline", instructions=_INSTRUCTIONS, icons=_ICONS, website_url=_WEBSITE,
             auth_server_provider=provider,            # provê DCR/authorize/token/metadata + introspecção
             auth=AuthSettings(issuer_url=public, resource_server_url=public, required_scopes=[],
                               client_registration_options=ClientRegistrationOptions(enabled=True)),
@@ -367,13 +378,14 @@ def _build_remote() -> FastMCP:
         print(f"[lifeline] modo: RESOURCE SERVER (AS = OAuth Server do Supabase, JWKS) · "
               f"issuer={issuer} · público={public}", flush=True)
         return _register(FastMCP(
-            "Lifeline", instructions=_INSTRUCTIONS,
+            "Lifeline", instructions=_INSTRUCTIONS, icons=_ICONS, website_url=_WEBSITE,
             token_verifier=SupabaseJWKSVerifier(),
             auth=AuthSettings(issuer_url=issuer, resource_server_url=public, required_scopes=[]),
             transport_security=ts,
         ))
     print(f"[lifeline] modo: AUTHLESS (single-tenant) · público={public}", flush=True)
-    return _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS, transport_security=ts))
+    return _register(FastMCP("Lifeline", instructions=_INSTRUCTIONS, icons=_ICONS, website_url=_WEBSITE,
+                             transport_security=ts))
 
 
 def main():

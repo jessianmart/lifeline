@@ -1722,3 +1722,19 @@ Visuais on-brand (paleta accent #7c89ff / #41d6c3, mono) emendados: (1) landing 
 Endpoint /mcp (streamable-http) agora exige Bearer JWT do Supabase, validado por JWKS/ES256 (LIFELINE_OAUTH=1 + LIFELINE_STORE=supabase, env setada no Render). Verificado: /.well-known/oauth-protected-resource publica o AS = Supabase (/auth/v1); /mcp sem token e com token-lixo -> 401; /mcp com JWT real do Supabase -> 200 (initialize). JWKS do projeto confirmado EC/ES256. Multi-tenant por RLS (owner=auth.uid). Conecta no Claude Code CLI por header Bearer. Proximo opcional: modo AS (LIFELINE_OAUTH_AS=1 + provider github no Supabase + redirect /oauth/callback) p/ o login hospedado no navegador (web apps).
 
 <!-- lifeline:end -->
+
+### #0091 — 2026-06-11T12:00:41.030561+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: MCP serverInfo: logo (icons) + website_url no initialize (SEP-973) — branding nos conectores
+- **parents**: dc3b7de3c2687fc4f1e7cd7198e963f081c8fdf0079975e2ad3ac0f3993ab750
+- **id**: e98471cb60c461fc85fccbad8b0fc2c8b7e79a43438eec664d8a88924dd9524b
+
+**Body**:
+O servidor MCP agora anuncia o logo do Lifeline via serverInfo.icons (SEP-973, suportado pelo SDK instalado: Implementation tem icons/title/websiteUrl e FastMCP aceita icons=/website_url=). Adicionado em TODOS os 4 FastMCP (stdio default + remoto AS/RS/authless): icons = PNG 512/1024 + favicon.svg (URLs PUBLICAS no lifelinecontext.com, alcançaveis sem auth) + website_url=https://lifelinecontext.com. Verificado local: create_initialization_options carrega icons+website_url. HONESTO: o claude.ai HOJE ainda mostra icone generico (gap do cliente, rastreado em anthropics/claude-ai-mcp#152 e claude-code#44675/#49040) — nao e bug nosso; clientes que suportam SEP-973 ja renderizam, e o claude.ai acende sozinho quando shipar. 50 testes passam.
+
+<!-- lifeline:end -->
