@@ -1706,3 +1706,19 @@ Análise sênior achou que a doc explicava o MECANISMO mas nao provava/posiciona
 Visuais on-brand (paleta accent #7c89ff / #41d6c3, mono) emendados: (1) landing painel do loop — SVG do ciclo Your AI <-> Lifeline ledger com '① CONNECT read context' e '② WORK propose + HITL'. (2) concepts, seção Lines/DAG — SVG do DAG dentro de uma line: bootstrap -> A/B/C, B podado por correction (tracejado + ✕, superseded), A+C fazem merge (parents ordenados, A+C ≡ C+A). Classe .diagram no CSS (width 100%, max 720/660, centrado). Python-Markdown passa o bloco <figure>/<svg> cru (verificado: 19 shapes intactos, nao escapado). Preview verificado a 1280px: loop fits (660 centrado), DAG 738->720 fits a coluna, sem quebra (o '120px' era viewport de 191).
 
 <!-- lifeline:end -->
+
+### #0090 — 2026-06-11T04:06:15.648987+00:00 — note
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: note
+- **summary**: Hosted MCP (lifeline-mcp.onrender.com) com RS auth LIGADO e verificado ao vivo
+- **parents**: ad697851fc082546b4281df5f6db1b4c66363b6f41907876ee16167b06e29055
+- **id**: dc3b7de3c2687fc4f1e7cd7198e963f081c8fdf0079975e2ad3ac0f3993ab750
+
+**Body**:
+Endpoint /mcp (streamable-http) agora exige Bearer JWT do Supabase, validado por JWKS/ES256 (LIFELINE_OAUTH=1 + LIFELINE_STORE=supabase, env setada no Render). Verificado: /.well-known/oauth-protected-resource publica o AS = Supabase (/auth/v1); /mcp sem token e com token-lixo -> 401; /mcp com JWT real do Supabase -> 200 (initialize). JWKS do projeto confirmado EC/ES256. Multi-tenant por RLS (owner=auth.uid). Conecta no Claude Code CLI por header Bearer. Proximo opcional: modo AS (LIFELINE_OAUTH_AS=1 + provider github no Supabase + redirect /oauth/callback) p/ o login hospedado no navegador (web apps).
+
+<!-- lifeline:end -->
