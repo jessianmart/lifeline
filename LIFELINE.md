@@ -1642,3 +1642,19 @@ A projeção store->LIFELINE.md->store nao era ponto-fixo NO DISCO (so em memori
 Auditoria das 6 docs publicadas (getting-started, concepts, architecture, integration, mcp, cli) por agentes revisores independentes. Correcoes de FATO, nao de estilo: (1) concepts: hash usa body.strip(), nao body. (2) architecture: documentado o portao de integridade (reduce() chama verify() e descarta entrada adulterada p/ integrity_broken), supersessao e PONTO-FIXO do grafo de correcoes (nao set que so cresce), e o piso de abstencao do recall (min_score; dense=0.3); .db reconciliado como runtime-store gitignored (nao 'cache') vs store-is-source; cloud store marcado como shipado; header de versao/licenca; \n final na forma canonica. (3) integration: comando lider vira lifeline-mcp (a forma LIFELINE_DB=... era bash-only num projeto PowerShell-first) + lifeline_recall listado. (4) mcp_remote: ref do Supabase trocado por <your-ref> (nao vazar nosso ref em doc publica), nota PowerShell p/ os blocos export, heading RS/AS desambiguado (LIFELINE_OAUTH=1 e Resource-Server, Supabase e o AS). (5) cli: --budget default 8000, restricoes do --store supabase (push/pull/clone/lines local-only), flags de identidade, LIFELINE_DB, dense recall. (6) getting-started: 'zero-dependency for recall' reescrito + nota de licenca FSL.
 
 <!-- lifeline:end -->
+
+### #0086 — 2026-06-11T02:02:42.002062+00:00 — feature
+
+- **author**: unknown
+- **agent**: human
+- **provider**: none
+- **model**: human
+- **kind**: feature
+- **summary**: AS endurecido p/ produção: login HOSPEDADO (sem ROPC) + client store DCR persistente
+- **parents**: 360d5418ec7731a879a4ff4b76520958ab74727a0435adc14cadafceeb8ff56b
+- **id**: 0f670c3f88eaa42ab8eb2a28d25e9211a6a7ddaee2d18da038bf3c36f74d78e7
+
+**Body**:
+Fecha os 2 limites declarados do AS empacotado (lifeline/oauth.py). (1) LOGIN HOSPEDADO: com LIFELINE_OAUTH_PROVIDER (ex.: github), /oauth/login redireciona ao login social do Supabase (GoTrue /auth/v1/authorize?provider=...) com PKCE server-side NOSSO; /oauth/callback troca o code via grant_type=pkce (auth_code+code_verifier guardado sob o ticket). A SENHA NUNCA toca nosso servidor. O form ROPC vira fallback só de dev/CLI (sem provider) — backward-compat, testes antigos verdes. (2) CLIENT STORE PLUGGABLE: ClientStore + InMemoryClientStore (default) + SupabaseClientStore (PostgREST, chave de serviço — registro e pre-login, e infra do AS por schema.sql:84-98); ativa com SUPABASE_SERVICE_ROLE, persiste em lifeline_oauth_clients e sobrevive a restart/sleep do Render e a multiplas replicas (senao some no restart e o conector quebra). Codes seguem one-time/efemeros (TTL 300s). Contrato GoTrue confirmado por pesquisa antes de codar (server-side PKCE: redirect_to + code_challenge_method=s256 -> ?code -> POST /token?grant_type=pkce {auth_code,code_verifier}). 9 testes novos (TestHostedLogin + TestPersistentClientStore); 31/31 em test_oauth.py, 142 na suite. MCP_REMOTE.md atualizado (env vars + config de Redirect URL no Supabase).
+
+<!-- lifeline:end -->

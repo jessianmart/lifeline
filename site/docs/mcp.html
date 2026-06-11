@@ -138,8 +138,11 @@ validate the resulting JWT by JWKS. <strong>Beta + multi-party — expect live d
 with <strong>PKCE (S256)</strong> + discovery metadata (RFC 8414), with login <strong>delegated to Supabase</strong>. Use it
 when you can't/don't want to enable Supabase's OAuth Server. It lives in <code>lifeline/oauth.py</code>.</p>
 <pre><code class="language-bash">export LIFELINE_OAUTH_AS=1 LIFELINE_STORE=supabase
-export SUPABASE_URL=… SUPABASE_KEY=&lt;apikey&gt;
+export SUPABASE_URL=https://&lt;your-ref&gt;.supabase.co SUPABASE_KEY=&lt;anon apikey&gt;
 export LIFELINE_MCP_PUBLIC_URL=https://your-host   # we are the issuer → goes into the AS metadata
+# --- production hardening (recommended; both on by default when the env is present) ---
+export LIFELINE_OAUTH_PROVIDER=github              # hosted social login (no password through us)
+export SUPABASE_SERVICE_ROLE=&lt;service_role key&gt;    # persist DCR clients (survives restart/replicas)
 pip install 'lifeline-context[cloud,remote]'        # remote = python-multipart (form parsing)
 lifeline-mcp-remote
 </code></pre>
@@ -148,23 +151,31 @@ lifeline-mcp-remote
 <li><code>POST /register</code> — the connector registers itself (DCR). <em>(SDK route)</em></li>
 <li><code>GET /authorize</code> — we stash the params (PKCE challenge, redirect, state, scopes) under an opaque
    <code>ticket</code> and send the browser to <strong>our</strong> <code>/oauth/login</code>. <em>(SDK route)</em></li>
-<li><code>GET/POST /oauth/login</code> — a minimal form; the POST hands email+password to Supabase
-   (<code>grant_type=password</code>). <strong>We never store/validate the password — Supabase does</strong>; we only relay
-   it over TLS. Success → we mint <strong>our</strong> authorization code (bound to the Supabase session) and
-   redirect to the connector's <code>redirect_uri</code> with <code>code</code>+<code>state</code>. <em>(our route)</em></li>
+<li><code>GET /oauth/login</code> — authenticates the user, delegated to Supabase, in one of two modes:
+   - <strong>Hosted (production, <code>LIFELINE_OAUTH_PROVIDER</code> set):</strong> we redirect the browser to Supabase's
+     hosted social login (<code>/auth/v1/authorize?provider=…</code>) with <strong>our own</strong> server-side PKCE. <strong>The
+     password never touches our server.</strong> GoTrue returns to <code>/oauth/callback?code=…</code>. <em>(our routes)</em>
+   - <strong>Form (dev/CLI, no provider):</strong> a minimal form whose POST relays email+password to Supabase
+     (<code>grant_type=password</code>). We never store/validate it — Supabase does. <em>(our route)</em>
+   Either way, success → we mint <strong>our</strong> authorization code (bound to the Supabase session) and
+   redirect to the connector's <code>redirect_uri</code> with <code>code</code>+<code>state</code>.</li>
 <li><code>POST /token</code> — the SDK verifies the <strong>PKCE verifier (S256)</strong> and the redirect; we swap the code
    for <code>access_token = the Supabase JWT</code>, which the Resource Server already validates per request
    (scoping the RLS by user). Refresh and revoke also hit Supabase. <em>(SDK route)</em></li>
 </ol>
 <p>Discovery: <code>GET /.well-known/oauth-authorization-server</code> advertises our <code>/authorize</code>, <code>/token</code>,
 <code>/register</code>. <code>LIFELINE_OAUTH_AS</code> implies the Resource Server (token introspection via the provider).</p>
-<p><strong>Declared limits (honest):</strong>
-- <strong>Password grant (ROPC):</strong> our server sees the password in transit. It's the minimal flow that's
-  testable and needs zero dashboard config. <strong>Production hardening:</strong> swap step 3 for a redirect to
-  Supabase's <strong>hosted</strong> login (SSO/social, GoTrue PKCE) — the AS here doesn't change, only step 3.
-- <strong>Client/code storage is in-memory:</strong> correct for a <strong>single instance</strong> (the current deploy). Codes
-  are one-time and expire (~300s). Multi-instance needs a shared client store — the
-  <code>lifeline_oauth_clients</code> table is in <code>schema.sql</code> for when you scale; point a client store at it.</p>
+<p><strong>Production hardening (implemented):</strong>
+- <strong>Hosted login replaces ROPC.</strong> Set <code>LIFELINE_OAUTH_PROVIDER</code> (e.g. <code>github</code>, <code>google</code>) and step 3
+  redirects to Supabase's hosted login — the password never transits our server. The form (ROPC) is
+  the <strong>dev/CLI fallback</strong> only, when no provider is configured. <strong>Supabase config:</strong> add
+  <code>https://your-host/oauth/callback</code> to <strong>Authentication → URL Configuration → Redirect URLs</strong> (use a
+  trailing <code>**</code> wildcard so the appended <code>?ticket=…&amp;code=…</code> query matches), and enable the chosen
+  social provider.
+- <strong>DCR clients persist.</strong> With <code>SUPABASE_SERVICE_ROLE</code> set, registered clients are stored in
+  <code>lifeline_oauth_clients</code> (service key — registration is pre-login infra, not tenant data) and
+  survive restarts/sleep and multiple replicas. Without it, the store is in-memory (fine for a single
+  always-on instance). Auth <strong>codes</strong> stay one-time/in-memory (~300s TTL) by design.</p>
 <h2>Connecting on the web apps (claude.ai / ChatGPT) — what the research confirmed (Jun/2026)</h2>
 <ul>
 <li><strong>claude.ai accepts an AUTHLESS connector</strong> (<code>auth: "none"</code>) → "connect in one click" with <strong>no

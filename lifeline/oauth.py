@@ -9,29 +9,35 @@ Fluxo (cada passo é uma volta do navegador do usuário):
   1. /register  — o conector se registra dinamicamente (DCR). [rota do SDK MCP]
   2. /authorize — guardamos os params (PKCE challenge, redirect, state, scopes) sob um
      `ticket` opaco e mandamos o navegador ao NOSSO /oauth/login.            [rota do SDK]
-  3. /oauth/login — formulário mínimo (entrar OU criar conta no primeiro acesso); o POST
-     entrega email+senha ao Supabase (`grant_type=password`, ou `/auth/v1/signup`). Nós NUNCA
-     guardamos/validamos a senha — o Supabase o faz; só repassamos sobre TLS. Sucesso →
-     cunhamos NOSSO authorization code (ligado à sessão Supabase) e redirecionamos ao
-     redirect_uri do conector com code+state. (Sign-up inline exige o projeto Supabase com
-     auto-confirm; com confirmação por email, o usuário confirma e volta para entrar.) [rota nossa]
+  3. /oauth/login — autenticação do usuário, delegada ao Supabase. DOIS modos:
+     (a) HOSPEDADO (produção, `login_provider` setado): redirect ao login social/SSO do
+         GoTrue (`/auth/v1/authorize?provider=…`) com PKCE server-side NOSSO. A senha
+         NUNCA toca nosso servidor. O GoTrue volta a /oauth/callback com `?code=…`.
+     (b) FORMULÁRIO (dev/CLI, sem provider): form mínimo cujo POST entrega email+senha ao
+         Supabase (`grant_type=password`/`signup`). Repassamos sobre TLS; nunca guardamos.
+     Sucesso (em qualquer modo) → cunhamos NOSSO authorization code (ligado à sessão
+     Supabase) e redirecionamos ao redirect_uri do conector com code+state.    [rotas nossas]
+  3b. /oauth/callback — (modo hospedado) recebe o `code` do GoTrue, troca por sessão via
+     `grant_type=pkce` (auth_code + code_verifier que guardamos sob o ticket).  [rota nossa]
   4. /token     — o SDK valida o PKCE verifier (S256) e o redirect; nós trocamos o code
      pelo access_token = o JWT do Supabase, que o Resource Server já valida por requisição
      (escopando a RLS por usuário). Refresh e revoke também batem no Supabase.  [rota do SDK]
 
-Limites DECLARADOS (honestidade #0046/#0047):
-  - Grant de SENHA (ROPC): nosso servidor vê a senha em trânsito. É o mínimo testável e
-    sem config de dashboard. Hardening de produção: trocar o /oauth/login por redirect ao
-    login HOSPEDADO do Supabase (SSO/social, fluxo PKCE do GoTrue) — o AS aqui não muda,
-    só o passo 3. Ver docs/MCP_REMOTE.md.
-  - Armazenamento de clients/codes é EM MEMÓRIA: correto para instância única (o deploy
-    atual). Multi-instância precisa de store compartilhado (tabela `lifeline_oauth_clients`
-    já no schema.sql). Codes são one-time e expiram (default 300s).
+Produção (endurecido #0084-AS): set `login_provider` (LIFELINE_OAUTH_PROVIDER=github) → modo
+hospedado, sem ROPC. O formulário de senha fica só p/ dev/CLI (sem provider).
+
+Persistência dos clients DCR: pluggable via `client_store`. Default EM MEMÓRIA (instância
+única); `SupabaseClientStore` (ativado por SUPABASE_SERVICE_ROLE) persiste em
+`lifeline_oauth_clients` → sobrevive a restart/sleep do Render e a múltiplas réplicas. Codes
+seguem one-time/efêmeros (TTL ~300s), nunca persistidos.
 """
+import base64
+import hashlib
 import logging
 import secrets
 import time
 from typing import Any, Dict, Optional, Tuple
+from urllib.parse import quote
 
 import httpx
 from mcp.server.auth.provider import (
@@ -73,6 +79,80 @@ _LOGIN_HTML = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 </form></body></html>"""
 
 
+# ---- store dos clients DCR (pluggable: memória p/ instância única; Supabase p/ persistir) ----
+class ClientStore:
+    """Porta do registro de clients DCR. `get` devolve o client ou None; `put` persiste."""
+    async def get(self, client_id: str) -> Optional[OAuthClientInformationFull]:
+        raise NotImplementedError
+
+    async def put(self, client: OAuthClientInformationFull) -> None:
+        raise NotImplementedError
+
+
+class InMemoryClientStore(ClientStore):
+    """Default: dict em processo. Correto p/ instância única; some no restart (por isso o
+    deploy escalado/efêmero usa o SupabaseClientStore)."""
+    def __init__(self):
+        self._d: Dict[str, OAuthClientInformationFull] = {}
+
+    async def get(self, client_id):
+        return self._d.get(client_id)
+
+    async def put(self, client):
+        self._d[client.client_id] = client
+
+
+class SupabaseClientStore(ClientStore):
+    """Persiste os clients DCR em `lifeline_oauth_clients` via PostgREST. O registro acontece
+    ANTES do login (não há uid p/ RLS), então usa a chave de SERVIÇO — é infra do AS, não dado
+    de tenant (ver schema.sql:84-98). `transport` injetável p/ teste."""
+    def __init__(self, *, url: str, service_key: str, transport: Any = None):
+        from lifeline.cloud import clean_url
+        self.url = clean_url(url)
+        self.key = (service_key or "").strip()
+        self._transport = transport
+
+    def _headers(self) -> Dict[str, str]:
+        return {"apikey": self.key, "Authorization": f"Bearer {self.key}",
+                "Content-Type": "application/json"}
+
+    async def get(self, client_id):
+        try:
+            async with httpx.AsyncClient(timeout=15, transport=self._transport) as c:
+                r = await c.get(f"{self.url}/rest/v1/lifeline_oauth_clients",
+                                params={"client_id": f"eq.{client_id}", "select": "client_info"},
+                                headers=self._headers())
+        except Exception:
+            _log.exception("client store get: falha de rede/URL")
+            return None
+        if r.status_code != 200:
+            _log.info("client store get -> %s", r.status_code)
+            return None
+        rows = r.json() or []
+        if not rows:
+            return None
+        try:
+            return OAuthClientInformationFull.model_validate(rows[0]["client_info"])
+        except Exception:
+            _log.exception("client store: client_info inválido na tabela")
+            return None
+
+    async def put(self, client):
+        # upsert idempotente: merge-duplicates no PK client_id (re-registro do mesmo conector não duplica)
+        try:
+            async with httpx.AsyncClient(timeout=15, transport=self._transport) as c:
+                r = await c.post(f"{self.url}/rest/v1/lifeline_oauth_clients",
+                                 params={"on_conflict": "client_id"},
+                                 headers={**self._headers(),
+                                          "Prefer": "resolution=merge-duplicates,return=minimal"},
+                                 json={"client_id": client.client_id,
+                                       "client_info": client.model_dump(mode="json")})
+            if r.status_code >= 300:
+                _log.error("client store put -> %s: %s", r.status_code, r.text[:200])
+        except Exception:
+            _log.exception("client store put: falha de rede/URL")
+
+
 class SupabaseAuthServer(
     OAuthAuthorizationServerProvider[AuthorizationCode, RefreshToken, AccessToken]
 ):
@@ -80,15 +160,22 @@ class SupabaseAuthServer(
     `transport` é injetável (httpx.MockTransport) para teste, igual a lifeline/cloud.py."""
 
     def __init__(self, *, supabase_url: str, supabase_key: str, public_url: str,
-                 transport: Any = None, code_ttl: int = 300):
+                 transport: Any = None, code_ttl: int = 300,
+                 login_provider: Optional[str] = None,
+                 client_store: Optional[ClientStore] = None):
         from lifeline.cloud import clean_url
         self.url = clean_url(supabase_url)           # garante https:// (erro comum no deploy)
         self.key = (supabase_key or "").strip()
         self.public_url = clean_url(public_url)
         self._transport = transport
         self.code_ttl = code_ttl
-        self._clients: Dict[str, OAuthClientInformationFull] = {}
+        # provider social/SSO p/ o login HOSPEDADO (ex.: "github"). None → cai no form de senha (dev).
+        self.login_provider = (login_provider or "").strip() or None
+        # registro de clients DCR: in-memory (default) ou persistente (Supabase) — pluggable.
+        self._store: ClientStore = client_store or InMemoryClientStore()
+        self._client_cache: Dict[str, OAuthClientInformationFull] = {}   # cache em frente ao store
         self._tickets: Dict[str, Tuple[str, AuthorizationParams]] = {}
+        self._pkce: Dict[str, str] = {}              # ticket → code_verifier do Supabase (modo hospedado)
         self._codes: Dict[str, Tuple[AuthorizationCode, Dict]] = {}  # code → (AuthCode, sessão Supabase)
 
     # ---- httpx p/ o Supabase (mock-friendly) --------------------------------------------
@@ -141,12 +228,19 @@ class SupabaseAuthServer(
         # 200 sem token → confirmação por email ligada no projeto Supabase
         return None, "conta criada — confirme pelo email e volte para entrar."
 
-    # ---- DCR (RFC 7591) -----------------------------------------------------------------
+    # ---- DCR (RFC 7591) — via ClientStore (cache em frente) -----------------------------
     async def get_client(self, client_id: str) -> Optional[OAuthClientInformationFull]:
-        return self._clients.get(client_id)
+        c = self._client_cache.get(client_id)
+        if c is not None:
+            return c
+        c = await self._store.get(client_id)         # busca persistente (sobrevive a restart)
+        if c is not None:
+            self._client_cache[client_id] = c
+        return c
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
-        self._clients[client_info.client_id] = client_info
+        self._client_cache[client_info.client_id] = client_info   # disponível já nesta request
+        await self._store.put(client_info)                        # persiste (best-effort no store)
 
     # ---- authorize → manda o usuário pro nosso login (que delega ao Supabase) -----------
     async def authorize(self, client: OAuthClientInformationFull,
@@ -156,9 +250,29 @@ class SupabaseAuthServer(
         return f"{self.public_url}/oauth/login?ticket={ticket}"
 
     # ---- rotas do nosso login (registradas via _register_login_routes) ------------------
-    async def login_get(self, request: Request) -> HTMLResponse:
+    def _new_pkce(self) -> Tuple[str, str]:
+        """Par PKCE (verifier, challenge S256) p/ o handshake NOSSO↔GoTrue no modo hospedado.
+        Separado do PKCE conector↔nós (esse o SDK gerencia)."""
+        verifier = secrets.token_urlsafe(64)[:96]    # 43–128 chars (RFC 7636)
+        challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+        return verifier, challenge
+
+    async def login_get(self, request: Request):
         ticket = request.query_params.get("ticket", "")
-        return HTMLResponse(_LOGIN_HTML.format(ticket=ticket, error=""))
+        if not self.login_provider:                  # modo dev/CLI: formulário de senha
+            return HTMLResponse(_LOGIN_HTML.format(ticket=ticket, error=""))
+        # modo HOSPEDADO: manda o navegador ao login social do Supabase (a senha não nos toca).
+        if ticket not in self._tickets:
+            return HTMLResponse(_LOGIN_HTML.format(ticket="", error="sessão expirada — recomece"),
+                                status_code=400)
+        verifier, challenge = self._new_pkce()
+        self._pkce[ticket] = verifier                # guardamos o verifier p/ o /oauth/callback
+        cb = f"{self.public_url}/oauth/callback?ticket={ticket}"
+        authz = (f"{self.url}/auth/v1/authorize?provider={quote(self.login_provider, safe='')}"
+                 f"&redirect_to={quote(cb, safe='')}"
+                 f"&code_challenge={challenge}&code_challenge_method=s256")
+        return RedirectResponse(url=authz, status_code=302)
 
     async def login_post(self, request: Request):
         try:
@@ -187,6 +301,38 @@ class SupabaseAuthServer(
             if not session or "access_token" not in session:
                 return HTMLResponse(_LOGIN_HTML.format(ticket=ticket, error="credenciais inválidas"),
                                     status_code=401)
+        return self._mint_and_redirect(ticket, client_id, params, session)
+
+    async def oauth_callback(self, request: Request):
+        """(modo hospedado) O GoTrue volta aqui com `?ticket=…&code=…` após o login social.
+        Trocamos o code pela sessão (grant_type=pkce, com o verifier guardado) e cunhamos o
+        NOSSO authorization code. Nenhuma senha passou por aqui."""
+        ticket = request.query_params.get("ticket", "")
+        code = request.query_params.get("code", "")
+        err = request.query_params.get("error_description") or request.query_params.get("error")
+        entry = self._tickets.get(ticket)
+        verifier = self._pkce.get(ticket)
+        if not entry or not verifier:
+            return HTMLResponse(_LOGIN_HTML.format(ticket="", error="sessão expirada — recomece"),
+                                status_code=400)
+        if err or not code:                            # login negado/cancelado no provedor
+            self._tickets.pop(ticket, None)
+            self._pkce.pop(ticket, None)
+            return HTMLResponse(_LOGIN_HTML.format(
+                ticket="", error="login não concluído — recomece a conexão"), status_code=400)
+        client_id, params = entry
+        session = await self._supabase_token("pkce", {"auth_code": code, "code_verifier": verifier})
+        self._pkce.pop(ticket, None)
+        if not session or "access_token" not in session:
+            self._tickets.pop(ticket, None)
+            return HTMLResponse(_LOGIN_HTML.format(
+                ticket="", error="não foi possível concluir o login — recomece"), status_code=401)
+        return self._mint_and_redirect(ticket, client_id, params, session)
+
+    def _mint_and_redirect(self, ticket: str, client_id: str,
+                           params: AuthorizationParams, session: Dict):
+        """Consome o ticket, cunha NOSSO authorization code (ligado à sessão Supabase) e
+        redireciona ao redirect_uri do conector com code+state. Compartilhado pelos dois modos."""
         self._tickets.pop(ticket, None)
         code = secrets.token_urlsafe(32)
         self._codes[code] = (AuthorizationCode(
@@ -270,3 +416,4 @@ class SupabaseAuthServer(
     def register_login_routes(self, server) -> None:
         server.custom_route("/oauth/login", methods=["GET"])(self.login_get)
         server.custom_route("/oauth/login", methods=["POST"])(self.login_post)
+        server.custom_route("/oauth/callback", methods=["GET"])(self.oauth_callback)  # modo hospedado

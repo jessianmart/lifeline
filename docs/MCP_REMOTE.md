@@ -107,8 +107,11 @@ when you can't/don't want to enable Supabase's OAuth Server. It lives in `lifeli
 
 ```bash
 export LIFELINE_OAUTH_AS=1 LIFELINE_STORE=supabase
-export SUPABASE_URL=… SUPABASE_KEY=<apikey>
+export SUPABASE_URL=https://<your-ref>.supabase.co SUPABASE_KEY=<anon apikey>
 export LIFELINE_MCP_PUBLIC_URL=https://your-host   # we are the issuer → goes into the AS metadata
+# --- production hardening (recommended; both on by default when the env is present) ---
+export LIFELINE_OAUTH_PROVIDER=github              # hosted social login (no password through us)
+export SUPABASE_SERVICE_ROLE=<service_role key>    # persist DCR clients (survives restart/replicas)
 pip install 'lifeline-context[cloud,remote]'        # remote = python-multipart (form parsing)
 lifeline-mcp-remote
 ```
@@ -118,10 +121,14 @@ Flow (each step is one browser round-trip):
 1. `POST /register` — the connector registers itself (DCR). *(SDK route)*
 2. `GET /authorize` — we stash the params (PKCE challenge, redirect, state, scopes) under an opaque
    `ticket` and send the browser to **our** `/oauth/login`. *(SDK route)*
-3. `GET/POST /oauth/login` — a minimal form; the POST hands email+password to Supabase
-   (`grant_type=password`). **We never store/validate the password — Supabase does**; we only relay
-   it over TLS. Success → we mint **our** authorization code (bound to the Supabase session) and
-   redirect to the connector's `redirect_uri` with `code`+`state`. *(our route)*
+3. `GET /oauth/login` — authenticates the user, delegated to Supabase, in one of two modes:
+   - **Hosted (production, `LIFELINE_OAUTH_PROVIDER` set):** we redirect the browser to Supabase's
+     hosted social login (`/auth/v1/authorize?provider=…`) with **our own** server-side PKCE. **The
+     password never touches our server.** GoTrue returns to `/oauth/callback?code=…`. *(our routes)*
+   - **Form (dev/CLI, no provider):** a minimal form whose POST relays email+password to Supabase
+     (`grant_type=password`). We never store/validate it — Supabase does. *(our route)*
+   Either way, success → we mint **our** authorization code (bound to the Supabase session) and
+   redirect to the connector's `redirect_uri` with `code`+`state`.
 4. `POST /token` — the SDK verifies the **PKCE verifier (S256)** and the redirect; we swap the code
    for `access_token = the Supabase JWT`, which the Resource Server already validates per request
    (scoping the RLS by user). Refresh and revoke also hit Supabase. *(SDK route)*
@@ -129,13 +136,17 @@ Flow (each step is one browser round-trip):
 Discovery: `GET /.well-known/oauth-authorization-server` advertises our `/authorize`, `/token`,
 `/register`. `LIFELINE_OAUTH_AS` implies the Resource Server (token introspection via the provider).
 
-**Declared limits (honest):**
-- **Password grant (ROPC):** our server sees the password in transit. It's the minimal flow that's
-  testable and needs zero dashboard config. **Production hardening:** swap step 3 for a redirect to
-  Supabase's **hosted** login (SSO/social, GoTrue PKCE) — the AS here doesn't change, only step 3.
-- **Client/code storage is in-memory:** correct for a **single instance** (the current deploy). Codes
-  are one-time and expire (~300s). Multi-instance needs a shared client store — the
-  `lifeline_oauth_clients` table is in `schema.sql` for when you scale; point a client store at it.
+**Production hardening (implemented):**
+- **Hosted login replaces ROPC.** Set `LIFELINE_OAUTH_PROVIDER` (e.g. `github`, `google`) and step 3
+  redirects to Supabase's hosted login — the password never transits our server. The form (ROPC) is
+  the **dev/CLI fallback** only, when no provider is configured. **Supabase config:** add
+  `https://your-host/oauth/callback` to **Authentication → URL Configuration → Redirect URLs** (use a
+  trailing `**` wildcard so the appended `?ticket=…&code=…` query matches), and enable the chosen
+  social provider.
+- **DCR clients persist.** With `SUPABASE_SERVICE_ROLE` set, registered clients are stored in
+  `lifeline_oauth_clients` (service key — registration is pre-login infra, not tenant data) and
+  survive restarts/sleep and multiple replicas. Without it, the store is in-memory (fine for a single
+  always-on instance). Auth **codes** stay one-time/in-memory (~300s TTL) by design.
 
 ## Connecting on the web apps (claude.ai / ChatGPT) — what the research confirmed (Jun/2026)
 

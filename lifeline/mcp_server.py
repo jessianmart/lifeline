@@ -331,19 +331,28 @@ def _build_remote() -> FastMCP:
 
     if want_as and have_supa:
         from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions
-        from lifeline.oauth import SupabaseAuthServer
+        from lifeline.oauth import SupabaseAuthServer, SupabaseClientStore
+        # Login HOSPEDADO (sem ROPC) quando há provider social configurado; senão, form de senha (dev).
+        login_provider = os.environ.get("LIFELINE_OAUTH_PROVIDER")
+        # Persistência dos clients DCR: com a chave de serviço → tabela (sobrevive a restart/réplicas);
+        # senão, em memória (instância única). É infra do AS, não dado de tenant (schema.sql:84-98).
+        svc = os.environ.get("SUPABASE_SERVICE_ROLE")
+        client_store = (SupabaseClientStore(url=os.environ["SUPABASE_URL"], service_key=svc)
+                        if svc else None)
         provider = SupabaseAuthServer(
             supabase_url=os.environ["SUPABASE_URL"], supabase_key=os.environ["SUPABASE_KEY"],
-            public_url=public)
+            public_url=public, login_provider=login_provider, client_store=client_store)
         server = _register(FastMCP(
             "Lifeline", instructions=_INSTRUCTIONS,
             auth_server_provider=provider,            # provê DCR/authorize/token/metadata + introspecção
             auth=AuthSettings(issuer_url=public, resource_server_url=public, required_scopes=[],
                               client_registration_options=ClientRegistrationOptions(enabled=True)),
             transport_security=ts))
-        provider.register_login_routes(server)        # /oauth/login (delega ao Supabase)
-        print(f"[lifeline] modo: AUTHORIZATION SERVER (DCR + auth-code/PKCE, login via Supabase) "
-              f"· público={public}", flush=True)
+        provider.register_login_routes(server)        # /oauth/login + /oauth/callback (delega ao Supabase)
+        login_mode = (f"HOSPEDADO via {login_provider}" if login_provider else "form de senha (dev)")
+        store_mode = "persistente (lifeline_oauth_clients)" if svc else "em memória"
+        print(f"[lifeline] modo: AUTHORIZATION SERVER (DCR + auth-code/PKCE) · login={login_mode} "
+              f"· clients={store_mode} · público={public}", flush=True)
         return server
 
     if want_rs and have_supa:

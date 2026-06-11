@@ -15,7 +15,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mcp.server.auth.provider import AuthorizationParams, TokenError  # noqa: E402
 from mcp.shared.auth import OAuthClientInformationFull                # noqa: E402
 
-from lifeline.oauth import SupabaseAuthServer                          # noqa: E402
+from lifeline.oauth import (                                          # noqa: E402
+    SupabaseAuthServer, SupabaseClientStore, InMemoryClientStore)
 from lifeline import mcp_server as srv                                 # noqa: E402
 from lifeline import cli                                               # noqa: E402
 
@@ -52,6 +53,12 @@ def _supabase_handler(seen=None):
             if grant == "refresh_token":
                 return httpx.Response(200, json={"access_token": "JWT-access-2",
                                                  "refresh_token": "RT-2", "expires_in": 3600})
+            if grant == "pkce":                         # login hospedado: troca auth_code+verifier
+                body = json.loads(req.content or b"{}")
+                if body.get("auth_code") == "good-code" and body.get("code_verifier"):
+                    return httpx.Response(200, json={"access_token": "JWT-hosted",
+                                                     "refresh_token": "RT-h", "expires_in": 3600})
+                return httpx.Response(400, json={"error": "invalid_grant"})
         if path == "/auth/v1/signup":
             body = json.loads(req.content or b"{}")
             if body.get("email") == "exists@b.c":
@@ -73,6 +80,31 @@ def _supabase_handler(seen=None):
 def _as(seen=None):
     return SupabaseAuthServer(supabase_url="https://proj.supabase.co", supabase_key="anon",
                               public_url="https://mcp.example", transport=httpx.MockTransport(_supabase_handler(seen)))
+
+
+def _as_hosted(seen=None):
+    """AS no modo HOSPEDADO (login social via Supabase, sem ROPC)."""
+    return SupabaseAuthServer(supabase_url="https://proj.supabase.co", supabase_key="anon",
+                              public_url="https://mcp.example", login_provider="github",
+                              transport=httpx.MockTransport(_supabase_handler(seen)))
+
+
+def _client_store_handler(db):
+    """Mock stateful da tabela lifeline_oauth_clients via PostgREST (GET select / POST upsert)."""
+    def handler(req: httpx.Request) -> httpx.Response:
+        import json
+        if req.url.path == "/rest/v1/lifeline_oauth_clients":
+            if req.method == "POST":
+                body = json.loads(req.content or b"{}")
+                db[body["client_id"]] = body["client_info"]
+                return httpx.Response(201)
+            if req.method == "GET":
+                cid = req.url.params.get("client_id", "").replace("eq.", "")
+                if cid in db:
+                    return httpx.Response(200, json=[{"client_info": db[cid]}])
+                return httpx.Response(200, json=[])
+        return httpx.Response(404)
+    return handler
 
 
 class _Form:
@@ -375,6 +407,109 @@ class TestRobustness(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(a._codes, {})
 
 
+class TestHostedLogin(unittest.IsolatedAsyncioTestCase):
+    """Endurecimento: com provider social configurado, /oauth/login redireciona ao login
+    HOSPEDADO do Supabase (a senha não toca nosso servidor) e /oauth/callback troca o code
+    por sessão (grant_type=pkce). É o caminho de produção que substitui o ROPC."""
+
+    async def _ticket(self, a):
+        _v, challenge = _pkce()
+        url = await a.authorize(_client(), AuthorizationParams(
+            state="st-h", scopes=["lifeline"], code_challenge=challenge,
+            redirect_uri="https://conector.example/callback",
+            redirect_uri_provided_explicitly=True, resource=None))
+        return url.split("ticket=")[1]
+
+    async def test_login_get_redirects_to_supabase_social(self):
+        a = _as_hosted()
+        ticket = await self._ticket(a)
+        resp = await a.login_get(_Form({}, query={"ticket": ticket}))
+        self.assertEqual(resp.status_code, 302)
+        loc = resp.headers["location"]
+        self.assertTrue(loc.startswith("https://proj.supabase.co/auth/v1/authorize?provider=github"), loc)
+        self.assertIn("code_challenge=", loc)
+        self.assertIn("code_challenge_method=s256", loc)
+        self.assertIn("oauth%2Fcallback", loc)            # redirect_to (encoded) volta pro callback
+        self.assertIn(ticket, a._pkce)                    # verifier guardado p/ a troca
+
+    async def test_login_get_bad_ticket_is_400(self):
+        a = _as_hosted()
+        resp = await a.login_get(_Form({}, query={"ticket": "nope"}))
+        self.assertEqual(resp.status_code, 400)
+
+    async def test_callback_exchanges_code_and_mints_token(self):
+        a = _as_hosted()
+        ticket = await self._ticket(a)
+        await a.login_get(_Form({}, query={"ticket": ticket}))      # popula _pkce
+        resp = await a.oauth_callback(_Form({}, query={"ticket": ticket, "code": "good-code"}))
+        self.assertEqual(resp.status_code, 302)
+        loc = resp.headers["location"]
+        self.assertIn("https://conector.example/callback", loc)
+        self.assertIn("state=st-h", loc)
+        self.assertEqual(a._tickets, {})                  # ticket consumido
+        self.assertNotIn(ticket, a._pkce)                 # verifier limpo
+        code = loc.split("code=")[1].split("&")[0]
+        ac = await a.load_authorization_code(_client(), code)
+        tok = await a.exchange_authorization_code(_client(), ac)
+        self.assertEqual(tok.access_token, "JWT-hosted")  # access token = JWT do Supabase (via pkce)
+
+    async def test_callback_provider_error_is_400_no_code(self):
+        a = _as_hosted()
+        ticket = await self._ticket(a)
+        await a.login_get(_Form({}, query={"ticket": ticket}))
+        resp = await a.oauth_callback(_Form({}, query={"ticket": ticket, "error": "access_denied"}))
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(a._codes, {})                    # login negado → nenhum code
+        self.assertNotIn(ticket, a._pkce)
+
+    async def test_callback_bad_ticket_is_400(self):
+        a = _as_hosted()
+        resp = await a.oauth_callback(_Form({}, query={"ticket": "nope", "code": "x"}))
+        self.assertEqual(resp.status_code, 400)
+
+    async def test_no_provider_falls_back_to_password_form(self):
+        a = _as()                                         # sem provider → form (dev/CLI)
+        resp = await a.login_get(_Form({}, query={"ticket": "t"}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("password", resp.body.decode())
+
+
+class TestPersistentClientStore(unittest.IsolatedAsyncioTestCase):
+    """Persistência DCR: SupabaseClientStore grava/lê na tabela; um AS com esse store recupera
+    o client mesmo numa instância NOVA (cache vazio) — prova que sobrevive a restart/réplica."""
+
+    async def test_supabase_client_store_roundtrip(self):
+        db = {}
+        store = SupabaseClientStore(url="https://proj.supabase.co", service_key="svc",
+                                    transport=httpx.MockTransport(_client_store_handler(db)))
+        self.assertIsNone(await store.get("c-1"))         # vazio
+        await store.put(_client("c-1"))
+        self.assertIn("c-1", db)                          # persistiu na "tabela"
+        got = await store.get("c-1")
+        self.assertEqual(got.client_id, "c-1")
+
+    async def test_default_store_is_in_memory(self):
+        a = _as()
+        self.assertIsInstance(a._store, InMemoryClientStore)
+
+    async def test_as_with_persistent_store_survives_new_instance(self):
+        db = {}
+
+        def mk_as():
+            store = SupabaseClientStore(url="https://proj.supabase.co", service_key="svc",
+                                        transport=httpx.MockTransport(_client_store_handler(db)))
+            return SupabaseAuthServer(supabase_url="https://proj.supabase.co", supabase_key="anon",
+                                      public_url="https://mcp.example", client_store=store,
+                                      transport=httpx.MockTransport(_supabase_handler()))
+
+        a1 = mk_as()
+        await a1.register_client(_client("persist-1"))
+        a2 = mk_as()                                      # "novo processo": _client_cache vazio
+        got = await a2.get_client("persist-1")            # vem da tabela, não da memória
+        self.assertIsNotNone(got)
+        self.assertEqual(got.client_id, "persist-1")
+
+
 class TestBuildRemoteAS(unittest.TestCase):
     def test_oauth_as_mounts_dcr_and_token_endpoints(self):
         self.addCleanup(lambda: cli._STORE.update(kind="sqlite", line="ledger"))
@@ -391,6 +526,7 @@ class TestBuildRemoteAS(unittest.TestCase):
         self.assertIn("/authorize", paths)
         self.assertIn("/token", paths)
         self.assertIn("/oauth/login", paths)
+        self.assertIn("/oauth/callback", paths)            # modo hospedado
         self.assertTrue(any("oauth-authorization-server" in p for p in paths), paths)
 
 
